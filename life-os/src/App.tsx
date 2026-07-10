@@ -1,5 +1,5 @@
 import { ChevronLeft, Moon, Settings, Sun } from "lucide-react";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import { NavBar, VIEWS, type ViewId } from "./components/layout/NavBar";
 import { SettingsModal } from "./components/settings/SettingsModal";
 import { readStorage, writeStorage } from "./data/storage";
@@ -36,8 +36,7 @@ function HeaderControls({
     <div className="flex items-center gap-2">
       <div className="flex items-center gap-2 rounded-full border border-border bg-surface px-3.5 py-1.5 font-mono text-xs text-text-dim">
         <span
-          className="animate-status-pulse h-2 w-2 rounded-full"
-          style={{ backgroundColor: "#34d399", "--color-accent": "#34d399" } as CSSProperties}
+          className="animate-status-pulse h-2 w-2 rounded-full bg-accent"
         />
         On track
       </div>

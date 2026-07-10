@@ -32,7 +32,7 @@ export function HomeView({ areas, areasLoading, onNavigate }: HomeViewProps) {
           title="Main"
           subtitle="Goals & daily plan"
           emoji="🏠"
-          tint="#30d158"
+          tint="#9a9a9e"
           className="min-h-[220px] lg:col-span-5 lg:row-span-2"
           onOpen={() => setSub("dashboard")}
         />
@@ -41,7 +41,7 @@ export function HomeView({ areas, areasLoading, onNavigate }: HomeViewProps) {
           title="ToDos"
           subtitle="Tasks & priorities"
           emoji="✅"
-          tint="#0a84ff"
+          tint="#9a9a9e"
           className="min-h-[180px] lg:col-span-7"
           onOpen={() => onNavigate("todos")}
         />
@@ -50,7 +50,7 @@ export function HomeView({ areas, areasLoading, onNavigate }: HomeViewProps) {
           title="Kalender"
           subtitle="Events & schedule"
           emoji="📅"
-          tint="#64d2ff"
+          tint="#9a9a9e"
           className="min-h-[180px] lg:col-span-4"
           onOpen={() => onNavigate("calendar")}
         />
@@ -59,7 +59,7 @@ export function HomeView({ areas, areasLoading, onNavigate }: HomeViewProps) {
           title="Finance"
           subtitle="Net worth & spending"
           emoji="📊"
-          tint="#ffd60a"
+          tint="#9a9a9e"
           className="min-h-[180px] lg:col-span-5"
           onOpen={() => onNavigate("finance")}
         />
@@ -68,7 +68,7 @@ export function HomeView({ areas, areasLoading, onNavigate }: HomeViewProps) {
           title="Fitness"
           subtitle="Lifts & progression"
           emoji="💪"
-          tint="#7dd3fc"
+          tint="#9a9a9e"
           className="min-h-[180px] lg:col-span-3"
           onOpen={() => onNavigate("fitness")}
         />
@@ -77,7 +77,7 @@ export function HomeView({ areas, areasLoading, onNavigate }: HomeViewProps) {
           title="Habits"
           subtitle="Streaks & routines"
           emoji="🔥"
-          tint="#ff9f0a"
+          tint="#9a9a9e"
           className="min-h-[180px] lg:col-span-4"
           onOpen={() => onNavigate("habits")}
         />
@@ -86,7 +86,7 @@ export function HomeView({ areas, areasLoading, onNavigate }: HomeViewProps) {
           title="Todays fuel"
           subtitle="Water, caffeine & meals"
           emoji="🍽️"
-          tint="#2dd4bf"
+          tint="#9a9a9e"
           className="min-h-[180px] lg:col-span-4"
           onOpen={() => onNavigate("fuel")}
         />
@@ -95,7 +95,7 @@ export function HomeView({ areas, areasLoading, onNavigate }: HomeViewProps) {
           title="Peak Tracker"
           subtitle="Today's energy curve"
           emoji="⚡"
-          tint="#818cf8"
+          tint="#9a9a9e"
           className="min-h-[180px] lg:col-span-4"
           onOpen={() => onNavigate("peak")}
         />
@@ -104,7 +104,7 @@ export function HomeView({ areas, areasLoading, onNavigate }: HomeViewProps) {
           title="Goals"
           subtitle="Progress & targets"
           emoji="🎯"
-          tint="#ff375f"
+          tint="#9a9a9e"
           className="min-h-[180px] lg:col-span-4"
           onOpen={() => onNavigate("goals")}
         />
