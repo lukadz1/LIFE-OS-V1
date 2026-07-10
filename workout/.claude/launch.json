@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "autoPort": true,
+  "configurations": [
+    {
+      "name": "workout",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "4599"],
+      "port": 4599
+    }
+  ]
+}

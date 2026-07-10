@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<meta name="theme-color" content="#000000" />
+<title>Studio — a quiet workout log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #000;
+    --accent: #fb5607;
+    --text: #f6f6f7;
+    --dim: rgba(235, 235, 245, 0.5);
+    --dim2: rgba(235, 235, 245, 0.3);
+    --line: rgba(255, 255, 255, 0.08);
+    --line-strong: rgba(255, 255, 255, 0.14);
+    --radius: 18px;
+    --pill: 999px;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+
+  body {
+    color: var(--text);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    min-height: 100dvh;
+    overscroll-behavior-y: none;
+  }
+
+  .serif {
+    font-family: "Instrument Serif", Georgia, "Times New Roman", serif;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+  }
+  .it { font-style: italic; }
+
+  /* ---------- Layout shell ---------- */
+  .wrap {
+    max-width: 460px;
+    margin: 0 auto;
+    padding: calc(env(safe-area-inset-top) + 26px) 22px calc(env(safe-area-inset-bottom) + 140px);
+  }
+
+  .screen { animation: fade 380ms cubic-bezier(0.16, 1, 0.3, 1); }
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .screen { animation: none; } }
+
+  /* ---------- Header ---------- */
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--dim2);
+  }
+  .display {
+    margin: 6px 0 0;
+    font-size: 42px;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+  }
+  .backlink {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    color: var(--dim);
+    font-size: 20px;
+    cursor: pointer;
+  }
+  .backlink svg { width: 15px; height: 15px; }
+
+  .header-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 18px; }
+  .cloud-btn {
+    display: inline-flex; align-items: center; gap: 6px; flex: none;
+    background: none; border: 1px solid var(--line); border-radius: var(--pill);
+    color: var(--dim); font-family: "Instrument Serif", serif; font-style: italic;
+    font-size: 13px; padding: 7px 13px; min-height: 32px; cursor: pointer;
+  }
+  .cloud-btn .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--dim2); flex: none; }
+  .cloud-btn.on { color: var(--text); border-color: var(--line-strong); }
+  .cloud-btn.on .dot { background: var(--accent); }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--dim2);
+    margin: 34px 2px 14px;
+  }
+
+  /* ---------- Cards ---------- */
+  .card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px 20px 14px;
+    margin-bottom: 14px;
+  }
+  .card-head { display: flex; align-items: baseline; gap: 12px; }
+  .rn {
+    font-size: 17px;
+    color: var(--dim2);
+    min-width: 22px;
+    font-style: italic;
+  }
+  .ex-name { font-size: 27px; line-height: 1.1; flex: 1; }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    margin: 18px 0 20px;
+    padding-left: 34px;
+  }
+  .stat .big { display: flex; align-items: baseline; gap: 4px; }
+  .stat .big b { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; }
+  .stat .big .unit { font-size: 15px; font-weight: 500; color: var(--dim); }
+  .stat .lbl { font-size: 12px; color: var(--dim); margin-top: 4px; }
+  .stat.right { text-align: right; }
+  .stat.right .big { justify-content: flex-end; }
+
+  /* orange is reserved: wins + live numbers only */
+  .win b { color: var(--accent); }
+  .win .unit { color: var(--accent); opacity: 0.7; }
+  .win .lbl { color: var(--accent); opacity: 0.85; }
+
+  .muted-stat b { color: var(--dim); font-weight: 500; }
+
+  /* ---------- Action words (small serif italic, lowercase) ---------- */
+  .actions {
+    display: flex;
+    gap: 8px;
+    border-top: 1px solid var(--line);
+    padding-top: 12px;
+    margin-top: 4px;
+  }
+  .action {
+    background: none;
+    border: 0;
+    padding: 8px 6px;
+    font-family: "Instrument Serif", Georgia, serif;
+    font-style: italic;
+    font-size: 19px;
+    text-transform: lowercase;
+    color: var(--dim);
+    cursor: pointer;
+    flex: 1;
+    min-height: 44px;
+    transition: color 160ms ease;
+  }
+  .action.lead { color: var(--text); }
+  .action:active { color: var(--accent); }
+
+  /* ---------- Pills / buttons ---------- */
+  .pill {
+    border-radius: var(--pill);
+    border: 1px solid var(--line-strong);
+    background: none;
+    color: var(--text);
+    font-family: "Instrument Serif", Georgia, serif;
+    font-style: italic;
+    font-size: 20px;
+    text-transform: lowercase;
+    padding: 14px 26px;
+    min-height: 52px;
+    cursor: pointer;
+  }
+  .pill.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+    font-weight: 400;
+  }
+  .pill.block { display: block; width: 100%; }
+  .pill.ghost { color: var(--dim); }
+  .pill.danger { color: #ff6b5b; border-color: rgba(255, 107, 91, 0.35); }
+  .pill:active { transform: scale(0.985); }
+
+  /* ---------- Floating primary (thumb reach) ---------- */
+  .fab-bar {
+    position: fixed;
+    left: 0; right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    padding: 14px 22px calc(env(safe-area-inset-bottom) + 18px);
+    background: linear-gradient(to top, #000 62%, transparent);
+    pointer-events: none;
+    z-index: 20;
+  }
+  .fab-bar .pill { pointer-events: auto; box-shadow: 0 10px 30px rgba(251, 86, 7, 0.28); min-width: 220px; text-align: center; }
+
+  /* ---------- Empty states ---------- */
+  .empty { padding: 30px 4px; }
+  .empty .warm {
+    font-size: 26px;
+    line-height: 1.3;
+    max-width: 20ch;
+    margin: 0 0 26px;
+    color: var(--text);
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+  .chip {
+    border: 1px solid var(--line);
+    border-radius: var(--pill);
+    background: none;
+    color: var(--dim);
+    font-family: "Instrument Serif", Georgia, serif;
+    font-style: italic;
+    font-size: 18px;
+    padding: 9px 16px;
+    min-height: 42px;
+    cursor: pointer;
+  }
+  .chip:active { color: var(--accent); border-color: var(--line-strong); }
+
+  /* ---------- History ---------- */
+  .day-group { margin-bottom: 26px; }
+  .day-head {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--dim2);
+    margin-bottom: 8px;
+  }
+  .set-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 13px 2px;
+    border-bottom: 1px solid var(--line);
+  }
+  .set-row .rn { font-size: 15px; min-width: 26px; }
+  .set-row .val { font-size: 17px; font-weight: 600; flex: 1; }
+  .set-row .val .u { font-weight: 400; color: var(--dim); font-size: 14px; }
+  .set-row .pr { color: var(--accent); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .set-row .time { font-size: 12px; color: var(--dim2); }
+  .set-row .rm {
+    background: none; border: 0; color: var(--dim2);
+    font-family: "Instrument Serif", serif; font-style: italic; font-size: 16px;
+    cursor: pointer; padding: 4px 6px; min-height: 40px;
+  }
+  .set-row .rm:active { color: #ff6b5b; }
+
+  /* ---------- Chart ---------- */
+  .chart-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 18px 16px; margin-top: 8px; }
+  .chart-svg { width: 100%; height: auto; display: block; }
+  .chart-legend { display: flex; justify-content: space-between; margin-top: 10px; font-size: 11px; color: var(--dim2); letter-spacing: 0.08em; text-transform: uppercase; }
+  .kpis { display: flex; gap: 12px; margin-top: 20px; }
+  .kpi { flex: 1; border: 1px solid var(--line); border-radius: 14px; padding: 15px 14px; }
+  .kpi .n { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+  .kpi .n .u { font-size: 13px; font-weight: 500; color: var(--dim); }
+  .kpi.win .n { color: var(--accent); }
+  .kpi .k { font-size: 11px; color: var(--dim); margin-top: 5px; letter-spacing: 0.04em; }
+
+  /* ---------- Sheet ---------- */
+  .scrim {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    opacity: 0; pointer-events: none;
+    transition: opacity 240ms ease;
+    z-index: 40;
+  }
+  .scrim.on { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    max-width: 460px; margin: 0 auto;
+    background: #000;
+    border-top: 1px solid var(--line-strong);
+    border-left: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+    border-radius: 26px 26px 0 0;
+    padding: 10px 22px calc(env(safe-area-inset-bottom) + 26px);
+    transform: translateY(101%);
+    transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 41;
+  }
+  .sheet.on { transform: none; }
+  .grabber { width: 38px; height: 4px; border-radius: 999px; background: var(--line-strong); margin: 8px auto 18px; }
+  .sheet h3 { margin: 0 0 2px; font-size: 30px; }
+  .sheet .sub { color: var(--dim); font-size: 14px; margin-bottom: 22px; }
+
+  /* Steppers */
+  .stepper { margin: 8px 0 22px; }
+  .stepper .k { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim2); margin-bottom: 10px; }
+  .stepper-row { display: flex; align-items: center; gap: 14px; }
+  .step-btn {
+    width: 56px; height: 56px; border-radius: var(--pill);
+    border: 1px solid var(--line-strong); background: none; color: var(--text);
+    font-size: 26px; line-height: 1; cursor: pointer; flex: none;
+  }
+  .step-btn:active { border-color: var(--accent); color: var(--accent); }
+  .step-val { flex: 1; text-align: center; }
+  .step-val input {
+    width: 100%; background: none; border: 0; color: var(--text);
+    font-family: "Inter", sans-serif; font-weight: 700; font-size: 46px; text-align: center;
+    letter-spacing: -0.02em; -moz-appearance: textfield;
+  }
+  .step-val input::-webkit-outer-spin-button,
+  .step-val input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .step-val .u { display: block; font-size: 12px; color: var(--dim); letter-spacing: 0.14em; text-transform: uppercase; margin-top: 2px; }
+
+  .text-input {
+    width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line-strong);
+    color: var(--text); font-family: "Instrument Serif", serif; font-style: italic;
+    font-size: 30px; padding: 8px 2px 12px; margin-bottom: 18px; outline: none;
+  }
+  .text-input::placeholder { color: var(--dim2); }
+
+  .hint { font-size: 13px; color: var(--dim); margin: -8px 0 20px; }
+  .hint b { color: var(--text); font-weight: 600; }
+  .hint .tap { color: var(--accent); cursor: pointer; }
+
+  .sheet-foot { display: flex; gap: 10px; margin-top: 6px; }
+  .sheet-foot .pill { flex: 1; text-align: center; }
+  .row-split { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .row-split span { color: var(--dim); font-size: 14px; }
+
+  /* ---------- Toast ---------- */
+  .toast {
+    position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 108px);
+    transform: translate(-50%, 20px);
+    background: #0c0c0c; border: 1px solid var(--line-strong);
+    border-radius: var(--pill); padding: 11px 22px;
+    font-family: "Instrument Serif", serif; font-style: italic; font-size: 19px;
+    opacity: 0; pointer-events: none; transition: opacity 240ms ease, transform 240ms ease;
+    z-index: 60; white-space: nowrap;
+  }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+  .toast.win { color: var(--accent); border-color: rgba(251, 86, 7, 0.4); }
+</style>
+</head>
+<body>
+  <div class="wrap"><div id="app"></div></div>
+
+  <div id="fab" class="fab-bar" style="display:none">
+    <button class="pill primary" data-open="add">add a lift</button>
+  </div>
+
+  <div id="scrim" class="scrim"></div>
+  <div id="sheet" class="sheet"><div class="grabber"></div><div id="sheetBody"></div></div>
+  <div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function () {
+  "use strict";
+
+  // ---------- storage ----------
+  var KEY = "studio.workout.v1";
+  // Where the "home dashboard" (Life OS) lives. Change this to your real URL if it moves.
+  var LIFE_OS_URL = "http://localhost:5173/";
+  var db = load();
+
+  function load() {
+    try {
+      var raw = JSON.parse(localStorage.getItem(KEY));
+      if (raw && Array.isArray(raw.exercises)) return raw;
+    } catch (e) {}
+    return { exercises: [], unit: "kg" };
+  }
+  function save() { localStorage.setItem(KEY, JSON.stringify(db)); cloudSchedulePush(); }
+  function uid() {
+    return (crypto.randomUUID ? crypto.randomUUID() : "x" + Date.now() + Math.random().toString(16).slice(2));
+  }
+
+  // ---------- helpers ----------
+  var unit = function () { return db.unit || "kg"; };
+  var ROMAN = [["x",10],["ix",9],["v",5],["iv",4],["i",1]];
+  function toRoman(n) {
+    var out = "", i;
+    for (i = 0; i < ROMAN.length; i++) { while (n >= ROMAN[i][1]) { out += ROMAN[i][0]; n -= ROMAN[i][1]; } }
+    return out || "i";
+  }
+  function fmt(n) { return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, ""); }
+  function epley(w, r) { return w * (1 + r / 30); }
+  function dayKey(ts) { var d = new Date(ts); return d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate(); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;" }[c]; }); }
+
+  function ex(id) { return db.exercises.filter(function (e) { return e.id === id; })[0]; }
+  function lastSet(e) { return e.sets.length ? e.sets[e.sets.length - 1] : null; }
+  function best1RM(e) {
+    return e.sets.reduce(function (m, s) { return Math.max(m, epley(s.weight, s.reps)); }, 0);
+  }
+  function perDayBest(e) {
+    var map = {};
+    e.sets.forEach(function (s) {
+      var k = dayKey(s.ts), v = epley(s.weight, s.reps);
+      if (!map[k] || v > map[k].value) map[k] = { value: v, ts: s.ts };
+    });
+    return Object.keys(map).map(function (k) { return { day: k, value: map[k].value, ts: map[k].ts }; })
+      .sort(function (a, b) { return a.ts - b.ts; });
+  }
+
+  // ---------- mutations ----------
+  function addExercise(name) {
+    var e = { id: uid(), name: name.trim(), sets: [] };
+    db.exercises.push(e); save(); return e;
+  }
+  function renameExercise(id, name) { var e = ex(id); if (e) { e.name = name.trim(); save(); } }
+  function removeExercise(id) { db.exercises = db.exercises.filter(function (e) { return e.id !== id; }); save(); }
+  function logSet(id, w, r) {
+    var e = ex(id); if (!e) return false;
+    var prev = best1RM(e);
+    e.sets.push({ id: uid(), weight: w, reps: r, ts: Date.now() });
+    save();
+    return epley(w, r) > prev + 0.01 && e.sets.length > 1;
+  }
+  function removeSet(exId, setId) {
+    var e = ex(exId); if (!e) return;
+    e.sets = e.sets.filter(function (s) { return s.id !== setId; }); save();
+  }
+
+  // ---------- view state ----------
+  var view = { name: "home", id: null };
+  function go(name, id) { view = { name: name, id: id || null }; render(); window.scrollTo(0, 0); }
+
+  var app = document.getElementById("app");
+  var fab = document.getElementById("fab");
+
+  function greeting() {
+    var h = new Date().getHours();
+    if (h < 12) return "Good morning";
+    if (h < 18) return "Good afternoon";
+    return "Good evening";
+  }
+  function dateLine() {
+    return new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" }).toUpperCase();
+  }
+  var backIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
+
+  // ---------- render ----------
+  function render() {
+    if (view.name === "home") return renderHome();
+    if (view.name === "chart") return renderChart(ex(view.id));
+    if (view.name === "history") return renderHistory(ex(view.id));
+  }
+
+  function renderHome() {
+    fab.style.display = db.exercises.length ? "flex" : "none";
+    var html = '<div class="screen">';
+    html += '<div class="header-row">';
+    html += '<button class="backlink serif it" data-home>' + backIcon + "home dashboard</button>";
+    html += cloudButtonHTML();
+    html += "</div>";
+    html += '<div class="eyebrow">' + dateLine() + "</div>";
+    html += '<h1 class="display serif it">' + greeting() + "</h1>";
+
+    if (!db.exercises.length) {
+      html += '<div class="empty">'
+        + '<p class="warm serif it">Let’s begin. Add the first lift you want to track.</p>'
+        + '<button class="pill primary" data-open="add">add a lift</button>'
+        + '<div class="chips">'
+        + suggestChips()
+        + "</div></div>";
+    } else {
+      html += '<div class="section-label">Your lifts</div>';
+      db.exercises.forEach(function (e, i) { html += cardHTML(e, i); });
+    }
+    html += "</div>";
+    app.innerHTML = html;
+  }
+
+  function suggestChips() {
+    return ["Back Squat", "Bench Press", "Deadlift", "Overhead Press", "Pull-up"]
+      .map(function (n) { return '<button class="chip" data-quick="' + esc(n) + '">' + esc(n) + "</button>"; }).join("");
+  }
+
+  function cardHTML(e, i) {
+    var ls = lastSet(e);
+    var rm = best1RM(e);
+    var h = '<article class="card" data-ex="' + e.id + '">';
+    h += '<div class="card-head"><span class="rn serif">' + toRoman(i + 1) + '</span>'
+       + '<h2 class="ex-name serif it">' + esc(e.name) + "</h2></div>";
+
+    h += '<div class="stat-row">';
+    if (ls) {
+      h += '<div class="stat"><div class="big"><b>' + fmt(ls.weight) + '</b><span class="unit">' + unit()
+         + '</span></div><div class="lbl">last set · ' + ls.reps + ' reps</div></div>';
+      h += '<div class="stat right win"><div class="big"><b>' + Math.round(rm) + '</b><span class="unit">' + unit()
+         + '</span></div><div class="lbl">est. max</div></div>';
+    } else {
+      h += '<div class="stat muted-stat"><div class="big"><b>—</b></div><div class="lbl">no sets yet</div></div>';
+    }
+    h += "</div>";
+
+    h += '<div class="actions">'
+       + '<button class="action lead" data-act="log">log</button>'
+       + '<button class="action" data-act="swap">swap</button>'
+       + '<button class="action" data-act="chart">chart</button>'
+       + '<button class="action" data-act="history">history</button>'
+       + "</div></article>";
+    return h;
+  }
+
+  function renderHistory(e) {
+    if (!e) return go("home");
+    fab.style.display = "none";
+    var h = '<div class="screen">';
+    h += '<button class="backlink serif it" data-back>' + backIcon + "back</button>";
+    h += '<div class="eyebrow">History</div>';
+    h += '<h1 class="display serif it">' + esc(e.name) + "</h1>";
+
+    if (!e.sets.length) {
+      h += '<div class="empty"><p class="warm serif it">Nothing logged yet. Your first set is the story’s first line.</p>'
+         + '<button class="pill primary" data-open="log" data-ex="' + e.id + '">log a set</button></div>';
+      app.innerHTML = h + "</div>"; return;
+    }
+
+    // group by day, newest first
+    var groups = {};
+    e.sets.forEach(function (s) { (groups[dayKey(s.ts)] = groups[dayKey(s.ts)] || []).push(s); });
+    var running = 0; // track PR progression
+    var order = e.sets.slice().sort(function (a,b){return a.ts-b.ts;});
+    var prSet = {};
+    order.forEach(function (s) { var v = epley(s.weight, s.reps); if (v > running + 0.01) { running = v; prSet[s.id] = true; } });
+
+    var keys = Object.keys(groups).sort(function (a, b) { return groups[b][0].ts - groups[a][0].ts; });
+    keys.forEach(function (k) {
+      var sets = groups[k].slice().sort(function (a,b){return a.ts-b.ts;});
+      var label = new Date(sets[0].ts).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+      h += '<div class="day-group"><div class="day-head">' + label.toUpperCase() + "</div>";
+      sets.forEach(function (s, idx) {
+        h += '<div class="set-row"><span class="rn serif">' + toRoman(idx + 1) + "</span>"
+          + '<span class="val">' + fmt(s.weight) + ' <span class="u">' + unit() + "</span> × " + s.reps + "</span>"
+          + (prSet[s.id] ? '<span class="pr">best</span>' : "")
+          + '<span class="time">' + new Date(s.ts).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) + "</span>"
+          + '<button class="rm serif it" data-rm="' + s.id + '" data-ex="' + e.id + '">remove</button></div>';
+      });
+      h += "</div>";
+    });
+    app.innerHTML = h + "</div>";
+  }
+
+  function renderChart(e) {
+    if (!e) return go("home");
+    fab.style.display = "none";
+    var series = perDayBest(e);
+    var h = '<div class="screen">';
+    h += '<button class="backlink serif it" data-back>' + backIcon + "back</button>";
+    h += '<div class="eyebrow">Progress</div>';
+    h += '<h1 class="display serif it">' + esc(e.name) + "</h1>";
+
+    if (series.length < 1) {
+      h += '<div class="empty"><p class="warm serif it">Log a few sessions and your curve will draw itself here.</p>'
+         + '<button class="pill primary" data-open="log" data-ex="' + e.id + '">log a set</button></div>';
+      app.innerHTML = h + "</div>"; return;
+    }
+
+    h += '<div class="chart-card">' + chartSVG(series) + "</div>";
+
+    var rm = best1RM(e);
+    var vol = e.sets.reduce(function (a, s) { return a + s.weight * s.reps; }, 0);
+    h += '<div class="kpis">'
+      + '<div class="kpi win"><div class="n">' + Math.round(rm) + '<span class="u">' + unit() + '</span></div><div class="k">est. max</div></div>'
+      + '<div class="kpi"><div class="n">' + e.sets.length + '</div><div class="k">sets logged</div></div>'
+      + '<div class="kpi"><div class="n">' + Math.round(vol/1000*10)/10 + '<span class="u">t</span></div><div class="k">total volume</div></div>'
+      + "</div>";
+
+    h += '<div style="margin-top:26px"><button class="pill primary block" data-open="log" data-ex="' + e.id + '">log a set</button></div>';
+    app.innerHTML = h + "</div>";
+  }
+
+  function chartSVG(series) {
+    var W = 320, H = 150, pad = 14, padB = 8;
+    var vals = series.map(function (p) { return p.value; });
+    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    if (max - min < 1) { max = max + 1; min = Math.max(0, min - 1); }
+    var n = series.length;
+    function X(i) { return n === 1 ? W / 2 : pad + (W - pad * 2) * (i / (n - 1)); }
+    function Y(v) { return pad + (H - pad - padB) * (1 - (v - min) / (max - min)); }
+
+    var line = "", dots = "", i;
+    for (i = 0; i < n; i++) {
+      line += (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(series[i].value).toFixed(1) + " ";
+    }
+    // baseline area (flat orange, very low opacity — a fill, not a gradient)
+    var area = line + "L" + X(n - 1).toFixed(1) + " " + (H - padB) + " L" + X(0).toFixed(1) + " " + (H - padB) + " Z";
+    for (i = 0; i < n; i++) {
+      var last = i === n - 1;
+      dots += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(series[i].value).toFixed(1) + '" r="' + (last ? 4.5 : 2.6)
+        + '" fill="' + (last ? "#fb5607" : "#000") + '" stroke="#fb5607" stroke-width="1.6"/>';
+    }
+    var svg = '<svg class="chart-svg" viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none" aria-hidden="true">'
+      + '<path d="' + area + '" fill="#fb5607" fill-opacity="0.08" stroke="none"/>'
+      + '<path d="' + line + '" fill="none" stroke="#fb5607" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'
+      + dots + "</svg>";
+    var first = new Date(series[0].ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    var lastD = new Date(series[n - 1].ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    svg += '<div class="chart-legend"><span>' + first + " · " + Math.round(min) + unit() + "</span><span>"
+      + lastD + " · " + Math.round(max) + unit() + "</span></div>";
+    return svg;
+  }
+
+  // ---------- sheets ----------
+  var scrim = document.getElementById("scrim");
+  var sheet = document.getElementById("sheet");
+  var sheetBody = document.getElementById("sheetBody");
+  var sheetCtx = {};
+
+  function openSheet(html) { sheetBody.innerHTML = html; scrim.classList.add("on"); sheet.classList.add("on"); }
+  function closeSheet() { scrim.classList.remove("on"); sheet.classList.remove("on"); }
+
+  function sheetLog(id) {
+    var e = ex(id); if (!e) return;
+    var ls = lastSet(e);
+    sheetCtx = { mode: "log", id: id };
+    var w = ls ? ls.weight : 20, r = ls ? ls.reps : 5;
+    var hint = ls ? '<p class="hint">last time · <b>' + fmt(ls.weight) + " " + unit() + " × " + ls.reps
+      + '</b> — <span class="tap" data-fill="' + ls.weight + ":" + ls.reps + '">repeat</span></p>' : "";
+    openSheet(
+      '<h3 class="serif">log</h3><div class="sub serif it">' + esc(e.name) + "</div>" + hint
+      + stepper("weight", w, unit(), 2.5)
+      + stepper("reps", r, "reps", 1)
+      + '<div class="sheet-foot"><button class="pill ghost" data-close>cancel</button>'
+      + '<button class="pill primary" data-save-log>save</button></div>'
+    );
+  }
+
+  function stepper(key, val, u, step) {
+    return '<div class="stepper" data-field="' + key + '" data-step="' + step + '">'
+      + '<div class="k">' + key + '</div><div class="stepper-row">'
+      + '<button class="step-btn" data-delta="-1" aria-label="decrease">−</button>'
+      + '<div class="step-val"><input type="number" inputmode="decimal" value="' + val + '" data-input="' + key + '"/><span class="u">' + u + '</span></div>'
+      + '<button class="step-btn" data-delta="1" aria-label="increase">+</button></div></div>';
+  }
+
+  function sheetAdd() {
+    sheetCtx = { mode: "add" };
+    openSheet(
+      '<h3 class="serif">new lift</h3><div class="sub">Name it however you say it in the gym.</div>'
+      + '<input class="text-input" id="nameInput" placeholder="e.g. Front Squat" autocomplete="off"/>'
+      + '<div class="chips">' + suggestChips() + "</div>"
+      + '<div class="sheet-foot"><button class="pill ghost" data-close>cancel</button>'
+      + '<button class="pill primary" data-save-add>add</button></div>'
+    );
+    setTimeout(function () { var el = document.getElementById("nameInput"); if (el) el.focus(); }, 320);
+  }
+
+  function sheetSwap(id) {
+    var e = ex(id); if (!e) return;
+    sheetCtx = { mode: "swap", id: id };
+    openSheet(
+      '<h3 class="serif">swap</h3><div class="sub">Rename this lift, or retire it.</div>'
+      + '<input class="text-input" id="nameInput" value="' + esc(e.name) + '" autocomplete="off"/>'
+      + '<div class="sheet-foot"><button class="pill ghost" data-close>cancel</button>'
+      + '<button class="pill primary" data-save-swap>save</button></div>'
+      + '<div class="row-split"><span>Remove all of its history</span>'
+      + '<button class="pill danger" data-remove-ex>remove</button></div>'
+    );
+  }
+
+  function cloudButtonHTML() {
+    var on = !!cloudUser;
+    return '<button class="cloud-btn' + (on ? " on" : "") + '" data-cloud><span class="dot"></span>'
+      + (on ? "synced" : "sync") + "</button>";
+  }
+
+  function sheetSignIn() {
+    sheetCtx = { mode: "signin" };
+    openSheet(
+      '<h3 class="serif">sync across devices</h3>'
+      + '<div class="sub">Get a magic link by email — no password. Open it on any device and your lifts follow you there.</div>'
+      + '<input class="text-input" id="emailInput" type="email" placeholder="you@email.com" autocomplete="email"/>'
+      + '<div class="sheet-foot"><button class="pill ghost" data-close>cancel</button>'
+      + '<button class="pill primary" data-send-magic>send link</button></div>'
+    );
+    setTimeout(function () { var el = document.getElementById("emailInput"); if (el) el.focus(); }, 320);
+  }
+
+  function sheetMagicSent(email) {
+    openSheet(
+      '<h3 class="serif">check your inbox</h3>'
+      + '<div class="sub">We sent a sign-in link to <b style="color:var(--text)">' + esc(email)
+      + '</b>. Open it here or on any other device to sync.</div>'
+      + '<div class="sheet-foot"><button class="pill primary block" data-close>done</button></div>'
+    );
+  }
+
+  function sheetAccount() {
+    sheetCtx = { mode: "account" };
+    openSheet(
+      '<h3 class="serif">synced</h3>'
+      + '<div class="sub">Signed in as <b style="color:var(--text)">' + esc(cloudUser.email)
+      + '</b>. Your lifts back up here automatically and follow you to any device.</div>'
+      + '<div class="sheet-foot"><button class="pill ghost" data-close>close</button>'
+      + '<button class="pill danger" data-sign-out>sign out</button></div>'
+    );
+  }
+
+  // ---------- toast ----------
+  var toastEl = document.getElementById("toast"), toastT;
+  function toast(msg, win) {
+    toastEl.textContent = msg;
+    toastEl.className = "toast on" + (win ? " win" : "");
+    clearTimeout(toastT);
+    toastT = setTimeout(function () { toastEl.className = "toast"; }, 1900);
+  }
+  function buzz(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} }
+
+  // ---------- events ----------
+  app.addEventListener("click", function (ev) {
+    if (ev.target.closest("[data-home]")) {
+      // Return to the Life OS home dashboard; fall back to going back if it isn't reachable.
+      try { window.location.assign(LIFE_OS_URL); } catch (e) { history.back(); }
+      return;
+    }
+
+    var back = ev.target.closest("[data-back]");
+    if (back) return go("home");
+
+    var cloudBtn = ev.target.closest("[data-cloud]");
+    if (cloudBtn) return cloudUser ? sheetAccount() : sheetSignIn();
+
+    var quick = ev.target.closest("[data-quick]");
+    if (quick) { var e = addExercise(quick.getAttribute("data-quick")); render(); sheetLog(e.id); return; }
+
+    var openLog = ev.target.closest('[data-open="log"]');
+    if (openLog) return sheetLog(openLog.getAttribute("data-ex"));
+    var openAdd = ev.target.closest('[data-open="add"]');
+    if (openAdd) return sheetAdd();
+
+    var actBtn = ev.target.closest("[data-act]");
+    if (actBtn) {
+      var card = ev.target.closest("[data-ex]"), id = card.getAttribute("data-ex");
+      var act = actBtn.getAttribute("data-act");
+      if (act === "log") return sheetLog(id);
+      if (act === "swap") return sheetSwap(id);
+      if (act === "chart") return go("chart", id);
+      if (act === "history") return go("history", id);
+    }
+
+    var rm = ev.target.closest("[data-rm]");
+    if (rm) { removeSet(rm.getAttribute("data-ex"), rm.getAttribute("data-rm")); render(); toast("removed"); return; }
+  });
+
+  // fab
+  document.getElementById("fab").addEventListener("click", function (ev) {
+    if (ev.target.closest('[data-open="add"]')) sheetAdd();
+  });
+
+  scrim.addEventListener("click", closeSheet);
+
+  sheet.addEventListener("click", function (ev) {
+    if (ev.target.closest("[data-close]")) return closeSheet();
+
+    var delta = ev.target.closest("[data-delta]");
+    if (delta) {
+      var box = delta.closest(".stepper");
+      var input = box.querySelector("input");
+      var step = parseFloat(box.getAttribute("data-step"));
+      var v = (parseFloat(input.value) || 0) + step * parseInt(delta.getAttribute("data-delta"), 10);
+      if (v < 0) v = 0;
+      input.value = fmt(Math.round(v * 100) / 100);
+      buzz(8);
+      return;
+    }
+
+    var fill = ev.target.closest("[data-fill]");
+    if (fill) {
+      var parts = fill.getAttribute("data-fill").split(":");
+      sheet.querySelector('[data-input="weight"]').value = parts[0];
+      sheet.querySelector('[data-input="reps"]').value = parts[1];
+      return;
+    }
+
+    var quick = ev.target.closest("[data-quick]");
+    if (quick) {
+      var inp = document.getElementById("nameInput");
+      if (inp) inp.value = quick.getAttribute("data-quick");
+      return;
+    }
+
+    if (ev.target.closest("[data-save-log]")) {
+      var w = parseFloat(sheet.querySelector('[data-input="weight"]').value) || 0;
+      var r = parseInt(sheet.querySelector('[data-input="reps"]').value, 10) || 0;
+      if (r <= 0) { toast("add some reps"); return; }
+      var isPR = logSet(sheetCtx.id, w, r);
+      closeSheet(); render(); buzz(isPR ? [10, 40, 20] : 12);
+      toast(isPR ? "new best · " + Math.round(epley(w, r)) + unit() : "logged", isPR);
+      return;
+    }
+
+    if (ev.target.closest("[data-save-add]")) {
+      var name = (document.getElementById("nameInput").value || "").trim();
+      if (!name) { toast("give it a name"); return; }
+      var nx = addExercise(name); closeSheet();
+      if (view.name !== "home") go("home"); else render();
+      sheetLog(nx.id);
+      return;
+    }
+
+    if (ev.target.closest("[data-save-swap]")) {
+      var nm = (document.getElementById("nameInput").value || "").trim();
+      if (!nm) { toast("give it a name"); return; }
+      renameExercise(sheetCtx.id, nm); closeSheet(); render(); toast("swapped");
+      return;
+    }
+
+    if (ev.target.closest("[data-remove-ex]")) {
+      removeExercise(sheetCtx.id); closeSheet();
+      if (view.name !== "home") go("home"); else render();
+      toast("retired");
+      return;
+    }
+
+    if (ev.target.closest("[data-send-magic]")) {
+      var email = (document.getElementById("emailInput").value || "").trim();
+      if (!email || email.indexOf("@") === -1) { toast("enter a real email"); return; }
+      cloudSendMagicLink(email);
+      return;
+    }
+
+    if (ev.target.closest("[data-sign-out]")) {
+      cloudSignOut();
+      closeSheet();
+      return;
+    }
+  });
+
+  // enter-to-save in name/email fields
+  sheet.addEventListener("keydown", function (ev) {
+    if (ev.key !== "Enter") return;
+    if (ev.target.id === "nameInput") {
+      ev.preventDefault();
+      if (sheetCtx.mode === "add") sheet.querySelector("[data-save-add]").click();
+      else if (sheetCtx.mode === "swap") sheet.querySelector("[data-save-swap]").click();
+    } else if (ev.target.id === "emailInput") {
+      ev.preventDefault();
+      sheet.querySelector("[data-send-magic]").click();
+    }
+  });
+
+  // ============================================================
+  // CLOUD SYNC via Supabase — optional backup so your lifts follow
+  // you across devices. Local storage stays the source of truth
+  // when offline; this mirrors `db` to one row per signed-in
+  // account and pulls it back down elsewhere. Row Level Security
+  // on the `workout_logs` table means only your own account can
+  // ever read or write your row — see the setup message for the
+  // SQL that creates it.
+  // ============================================================
+  var SUPABASE_URL = 'https://srajryooffirbroltjmg.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+  var cloudSupa = (window.supabase && SUPABASE_URL && SUPABASE_KEY)
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+    : null;
+  var cloudUser = null;
+  var cloudChannel = null;
+  var cloudPushTimer = null;
+  var cloudSuppressPush = false;
+  var cloudLastPushedJson = null;
+
+  function cloudUpdateHeader() { if (view.name === "home") render(); }
+
+  function cloudSchedulePush() {
+    if (!cloudSupa || !cloudUser || cloudSuppressPush) return;
+    clearTimeout(cloudPushTimer);
+    cloudPushTimer = setTimeout(cloudPushNow, 400);
+  }
+
+  function cloudPushNow() {
+    if (!cloudSupa || !cloudUser) return;
+    var json = JSON.stringify(db);
+    if (json === cloudLastPushedJson) return;
+    cloudSupa.from('workout_logs')
+      .upsert({ user_id: cloudUser.id, data: db, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+      .then(function (res) { if (!res.error) cloudLastPushedJson = json; });
+  }
+
+  // Ignores an incoming update while a sheet is open so it can't yank
+  // an input out from under something you're mid-way through typing —
+  // your next save() will push the newer local state over it anyway.
+  function cloudApplyRemote(remote) {
+    if (!remote || !Array.isArray(remote.exercises)) return;
+    if (sheet.classList.contains("on")) return;
+    var json = JSON.stringify(remote);
+    if (json === JSON.stringify(db)) return;
+    cloudSuppressPush = true;
+    db = remote;
+    save();
+    cloudLastPushedJson = json;
+    cloudSuppressPush = false;
+    render();
+  }
+
+  function cloudSubscribe() {
+    if (!cloudSupa || !cloudUser || cloudChannel) return;
+    cloudChannel = cloudSupa.channel('workout_logs_' + cloudUser.id)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'workout_logs',
+        filter: 'user_id=eq.' + cloudUser.id,
+      }, function (payload) {
+        if (payload.new && payload.new.data) cloudApplyRemote(payload.new.data);
+      })
+      .subscribe();
+  }
+
+  function cloudUnsubscribe() {
+    if (cloudChannel) { cloudSupa.removeChannel(cloudChannel); cloudChannel = null; }
+  }
+
+  function cloudOnSignedIn(user) {
+    cloudUser = user;
+    cloudUpdateHeader();
+    cloudSupa.from('workout_logs').select('data').eq('user_id', user.id).maybeSingle()
+      .then(function (res) {
+        if (res.data && res.data.data && Array.isArray(res.data.data.exercises) && res.data.data.exercises.length) {
+          cloudApplyRemote(res.data.data);
+        } else if (db.exercises.length) {
+          cloudSchedulePush();
+        }
+        cloudSubscribe();
+      });
+  }
+
+  function cloudSendMagicLink(email) {
+    if (!cloudSupa) { toast("cloud sync unavailable"); return; }
+    cloudSupa.auth.signInWithOtp({ email: email, options: { emailRedirectTo: window.location.href } })
+      .then(function (res) {
+        if (res.error) { toast("couldn't send link"); return; }
+        sheetMagicSent(email);
+      });
+  }
+
+  function cloudSignOut() {
+    if (!cloudSupa) return;
+    cloudUnsubscribe();
+    cloudSupa.auth.signOut();
+    cloudUser = null;
+    cloudUpdateHeader();
+    toast("signed out — lifts stay on this device");
+  }
+
+  (function cloudInit() {
+    if (!cloudSupa) return;
+    cloudSupa.auth.getSession().then(function (res) {
+      var session = res.data && res.data.session;
+      if (session && session.user) cloudOnSignedIn(session.user);
+    });
+    cloudSupa.auth.onAuthStateChange(function (event, session) {
+      if (event === "SIGNED_IN" && session && session.user && !cloudUser) {
+        // Strip the magic-link tokens out of the URL bar once consumed.
+        if (window.location.hash) history.replaceState(null, "", window.location.pathname + window.location.search);
+        cloudOnSignedIn(session.user);
+        toast("signed in — syncing");
+      } else if (event === "SIGNED_OUT") {
+        cloudUser = null;
+        cloudUpdateHeader();
+      }
+    });
+  })();
+
+  render();
+})();
+</script>
+</body>
+</html>
