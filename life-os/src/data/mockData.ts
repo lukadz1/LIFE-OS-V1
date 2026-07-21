@@ -1,5 +1,7 @@
 import type {
   CalendarEvent,
+  CalorieEntry,
+  CalorieGoals,
   Exercise,
   FuelEntry,
   Goal,
@@ -216,6 +218,43 @@ export const mockFuelEntries: FuelEntry[] = [
 
 export const defaultSupplementList = ["Vitamin D", "Omega-3", "Magnesium"];
 
+export const mockCalorieEntries: CalorieEntry[] = [
+  {
+    id: "cal-1",
+    label: "Oatmeal with berries",
+    kcal: 350,
+    proteinG: 12,
+    carbsG: 58,
+    fatG: 7,
+    at: todayAt(8, 15),
+  },
+  {
+    id: "cal-2",
+    label: "Grilled chicken salad",
+    kcal: 520,
+    proteinG: 42,
+    carbsG: 28,
+    fatG: 24,
+    at: todayAt(12, 45),
+  },
+  {
+    id: "cal-3",
+    label: "Protein shake",
+    kcal: 180,
+    proteinG: 30,
+    carbsG: 8,
+    fatG: 2,
+    at: todayAt(16, 0),
+  },
+];
+
+export const defaultCalorieGoals: CalorieGoals = {
+  kcalGoal: 2200,
+  proteinGoal: 150,
+  carbsGoal: 220,
+  fatGoal: 70,
+};
+
 export const mockGoals: Goal[] = [
   {
     id: "goal-1",
@@ -273,6 +312,7 @@ export const mockExercises: Exercise[] = [
     step: 2.5,
     startWeight: 60,
     bodyweight: false,
+    restSeconds: 120,
   },
   {
     id: "ex-ohp",
@@ -284,6 +324,7 @@ export const mockExercises: Exercise[] = [
     step: 2.5,
     startWeight: 35,
     bodyweight: false,
+    restSeconds: 120,
   },
   {
     id: "ex-pushdown",
@@ -295,6 +336,7 @@ export const mockExercises: Exercise[] = [
     step: 2.5,
     startWeight: 25,
     bodyweight: false,
+    restSeconds: 75,
   },
   {
     id: "ex-pullup",
@@ -306,6 +348,7 @@ export const mockExercises: Exercise[] = [
     step: 1,
     startWeight: 0,
     bodyweight: true,
+    restSeconds: 120,
   },
   {
     id: "ex-row",
@@ -317,6 +360,7 @@ export const mockExercises: Exercise[] = [
     step: 2.5,
     startWeight: 50,
     bodyweight: false,
+    restSeconds: 120,
   },
   {
     id: "ex-curl",
@@ -328,6 +372,7 @@ export const mockExercises: Exercise[] = [
     step: 1.25,
     startWeight: 15,
     bodyweight: false,
+    restSeconds: 75,
   },
   {
     id: "ex-squat",
@@ -339,6 +384,7 @@ export const mockExercises: Exercise[] = [
     step: 5,
     startWeight: 80,
     bodyweight: false,
+    restSeconds: 150,
   },
   {
     id: "ex-rdl",
@@ -350,6 +396,7 @@ export const mockExercises: Exercise[] = [
     step: 5,
     startWeight: 60,
     bodyweight: false,
+    restSeconds: 120,
   },
   {
     id: "ex-legpress",
@@ -361,6 +408,7 @@ export const mockExercises: Exercise[] = [
     step: 5,
     startWeight: 100,
     bodyweight: false,
+    restSeconds: 100,
   },
 ];
 

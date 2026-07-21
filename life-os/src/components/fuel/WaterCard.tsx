@@ -1,5 +1,5 @@
 import { Droplets, Minus, Plus } from "lucide-react";
-import { Gauge } from "../scores/Gauge";
+import { Gauge } from "./Gauge";
 import { Panel } from "../layout/Panel";
 
 interface WaterCardProps {

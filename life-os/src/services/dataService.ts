@@ -1,7 +1,9 @@
 import {
+  defaultCalorieGoals,
   defaultSpendCategories,
   defaultSupplementList,
   lifeAreas,
+  mockCalorieEntries,
   mockEvents,
   mockExercises,
   mockFuelEntries,
@@ -18,6 +20,8 @@ import {
 import { readStorage, writeStorage } from "../data/storage";
 import type {
   CalendarEvent,
+  CalorieEntry,
+  CalorieGoals,
   Exercise,
   FinanceAccount,
   FuelEntry,
@@ -218,6 +222,36 @@ export async function getSupplementList(): Promise<string[]> {
 export async function saveSupplementList(list: string[]): Promise<string[]> {
   writeStorage(SUPPLEMENT_LIST_KEY, list);
   return delay(list);
+}
+
+// ---- Calorie tracker ----
+
+const CALORIE_ENTRIES_KEY = "calorie-entries";
+
+export async function getCalorieEntries(): Promise<CalorieEntry[]> {
+  return delay(
+    readStorage<CalorieEntry[]>(CALORIE_ENTRIES_KEY, mockCalorieEntries),
+  );
+}
+
+export async function saveCalorieEntries(
+  entries: CalorieEntry[],
+): Promise<CalorieEntry[]> {
+  writeStorage(CALORIE_ENTRIES_KEY, entries);
+  return delay(entries);
+}
+
+const CALORIE_GOALS_KEY = "calorie-goals";
+
+export async function getCalorieGoals(): Promise<CalorieGoals> {
+  return delay(readStorage<CalorieGoals>(CALORIE_GOALS_KEY, defaultCalorieGoals));
+}
+
+export async function saveCalorieGoals(
+  goals: CalorieGoals,
+): Promise<CalorieGoals> {
+  writeStorage(CALORIE_GOALS_KEY, goals);
+  return delay(goals);
 }
 
 // ---- Exercises + set logs ----

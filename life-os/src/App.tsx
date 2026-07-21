@@ -1,12 +1,13 @@
 import { ChevronLeft, Moon, Settings, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavBar, VIEWS, type ViewId } from "./components/layout/NavBar";
+import { StreakChip } from "./components/layout/StreakChip";
 import { SettingsModal } from "./components/settings/SettingsModal";
 import { readStorage, writeStorage } from "./data/storage";
 import { useLifeAreas } from "./hooks/useLifeAreas";
 import { useProfile } from "./hooks/useProfile";
 import { getTimeGreeting } from "./utils/date";
-import { CalendarView } from "./views/CalendarView";
+import { CaloriesView } from "./views/CaloriesView";
 import { FinanceView } from "./views/FinanceView";
 import { FitnessView } from "./views/FitnessView";
 import { FuelView } from "./views/FuelView";
@@ -34,9 +35,10 @@ function HeaderControls({
 }: Omit<HeaderProps, "minimal">) {
   return (
     <div className="flex items-center gap-2">
+      <StreakChip />
       <div className="flex items-center gap-2 rounded-full border border-border bg-surface px-3.5 py-1.5 font-mono text-xs text-text-dim">
         <span
-          className="animate-status-pulse h-2 w-2 rounded-full bg-accent"
+          className="animate-status-pulse h-2 w-2 rounded-full bg-[#34d399]"
         />
         On track
       </div>
@@ -128,7 +130,7 @@ function App() {
   const isHome = view === "home";
 
   return (
-    <div className="mx-auto min-h-screen max-w-[1600px] px-4 py-6 sm:px-6 lg:px-10">
+    <div className="mx-auto min-h-[100dvh] max-w-[1600px] px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-10">
       <Header
         theme={theme}
         onToggleTheme={() =>
@@ -166,20 +168,14 @@ function App() {
             : "animate-view-in-left"
         }`}
       >
-        {view === "home" && (
-          <HomeView
-            areas={areas}
-            areasLoading={areasLoading}
-            onNavigate={handleViewChange}
-          />
-        )}
+        {view === "home" && <HomeView onNavigate={handleViewChange} />}
         {view === "todos" && <TodosView areas={areas} />}
-        {view === "calendar" && <CalendarView areas={areas} />}
         {view === "finance" && <FinanceView />}
         {view === "fitness" && <FitnessView />}
         {view === "habits" && <HabitsView areas={areas} />}
         {view === "fuel" && <FuelView />}
         {view === "peak" && <PeakView />}
+        {view === "calories" && <CaloriesView />}
         {view === "goals" && <GoalsView areas={areas} />}
       </main>
     </div>

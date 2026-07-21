@@ -219,6 +219,22 @@ const LIBRARY: { group: string; items: string[] }[] = [
   },
 ];
 
+// Rough heuristic so a fresh lift gets a sensible rest of its own straight
+// away: big barbell/compound moves default to a longer rest than accessories.
+const LONG_REST_HINTS = [
+  "squat",
+  "deadlift",
+  "press",
+  "row",
+  "pull-up",
+  "pullup",
+  "chin-up",
+];
+function defaultRestSeconds(name: string): number {
+  const n = name.toLowerCase();
+  return LONG_REST_HINTS.some((hint) => n.includes(hint)) ? 120 : 75;
+}
+
 // Defaults for the fields the editorial UI doesn't expose.
 function newExercise(name: string): Omit<Exercise, "id"> {
   return {
@@ -230,6 +246,7 @@ function newExercise(name: string): Omit<Exercise, "id"> {
     step: 2.5,
     startWeight: 20,
     bodyweight: false,
+    restSeconds: defaultRestSeconds(name),
   };
 }
 
@@ -246,6 +263,12 @@ type Sheet =
   | { mode: "swap"; id: string }
   | null;
 type ToastKind = "mint" | "amber" | "neutral";
+
+interface RestTimerState {
+  exerciseId: string;
+  exerciseName: string;
+  endsAt: number;
+}
 
 export function FitnessView() {
   const {
@@ -271,6 +294,9 @@ export function FitnessView() {
   // Today's in-progress session (drafts until "finish"), persisted across reloads.
   const [session, setSession] = useState<SessionEntry[]>(loadDraft);
   const [celebration, setCelebration] = useState<Celebration | null>(null);
+  // Rest timer for the lift most recently logged — arms itself on every set,
+  // ticks live, and floats above whichever fitness screen is open.
+  const [restTimer, setRestTimer] = useState<RestTimerState | null>(null);
 
   useEffect(() => {
     try {
@@ -302,6 +328,19 @@ export function FitnessView() {
     );
   }
 
+  // Rest timer arms itself the instant a set lands — using that lift's own
+  // rest length — and replaces whatever timer was already running.
+  const armRest = (exerciseId: string) => {
+    const ex = byId[exerciseId];
+    if (!ex) return;
+    const seconds = ex.restSeconds ?? defaultRestSeconds(ex.name);
+    setRestTimer({
+      exerciseId,
+      exerciseName: ex.name,
+      endsAt: Date.now() + seconds * 1000,
+    });
+  };
+
   // ---------- library actions ----------
   const doAdd = (name: string) => {
     const trimmed = name.trim();
@@ -314,6 +353,7 @@ export function FitnessView() {
     const prev = best1RM(setsFor(setLogs, id));
     logSet(id, w, r);
     setSheet(null);
+    armRest(id);
     const isPR = setsFor(setLogs, id).length > 0 && epley(w, r) > prev + 0.01;
     try {
       navigator.vibrate?.(isPR ? [10, 40, 20] : 12);
@@ -357,6 +397,7 @@ export function FitnessView() {
         j === i ? { ...e, sets: [...e.sets, set] } : e,
       );
     });
+    armRest(exId);
     try {
       navigator.vibrate?.(
         grade === "pr" ? [12, 40, 24] : grade === "beat" ? [10, 30] : 10,
@@ -581,7 +622,7 @@ export function FitnessView() {
 
       {toast && (
         <div
-          className={`fixed bottom-24 left-1/2 z-[60] -translate-x-1/2 rounded-full border px-5 py-2.5 font-serif text-[19px] italic whitespace-nowrap ${
+          className={`fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] left-1/2 z-[60] -translate-x-1/2 rounded-full border px-5 py-2.5 font-serif text-[19px] italic whitespace-nowrap ${
             toast.kind === "amber"
               ? "border-[#f59e0b]/45 text-[#f59e0b]"
               : toast.kind === "mint"
@@ -593,6 +634,103 @@ export function FitnessView() {
           {toast.msg}
         </div>
       )}
+
+      {restTimer && (
+        <RestTimerBar
+          state={restTimer}
+          onAdjust={(delta) =>
+            setRestTimer((t) =>
+              t ? { ...t, endsAt: Math.max(Date.now(), t.endsAt + delta * 1000) } : t,
+            )
+          }
+          onReset={() => setRestTimer(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------- rest timer ----------
+function RestTimerBar(props: {
+  state: RestTimerState;
+  onAdjust: (deltaSeconds: number) => void;
+  onReset: () => void;
+}) {
+  const { endsAt, exerciseName } = props.state;
+  const [now, setNow] = useState(() => Date.now());
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const iv = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(iv);
+  }, []);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  const remainingMs = Math.max(0, endsAt - now);
+  const remaining = Math.ceil(remainingMs / 1000);
+  const mm = Math.floor(remaining / 60);
+  const ss = remaining % 60;
+  const label = `${mm}:${String(ss).padStart(2, "0")}`;
+  const done = remainingMs === 0;
+
+  // Once rest is up, clear the bar on its own after a short grace period —
+  // logging the next set (or a manual ×) can still dismiss it sooner.
+  useEffect(() => {
+    if (!done) return;
+    const t = window.setTimeout(() => props.onReset(), 3000);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [done]);
+
+  return (
+    <div
+      className={`fixed inset-x-0 bottom-[calc(2rem+env(safe-area-inset-bottom))] z-[55] flex flex-col items-center gap-2 px-4 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
+        mounted ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
+      }`}
+    >
+      <div
+        className={`flex items-center gap-1 rounded-full border border-white/10 py-2.5 pr-2.5 pl-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.45)] ${
+          done ? "animate-win-pulse motion-reduce:animate-none" : ""
+        }`}
+        style={{ background: "#0c0c0c" }}
+      >
+        <button
+          onClick={() => props.onAdjust(-15)}
+          aria-label="subtract 15 seconds"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 font-mono text-[11px] text-text-dim transition-colors active:border-[#34d399] active:text-[#34d399]"
+        >
+          -15
+        </button>
+        <div className="flex min-w-[152px] flex-col items-center px-3">
+          <span className="font-mono text-[26px] leading-none font-semibold tracking-tight text-[#34d399] tabular-nums">
+            {label}
+          </span>
+          <span className="mt-1 max-w-[180px] truncate text-[10px] font-semibold tracking-[0.14em] text-text-dim/70 uppercase">
+            {exerciseName}
+          </span>
+        </div>
+        <button
+          onClick={() => props.onAdjust(15)}
+          aria-label="add 15 seconds"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 font-mono text-[11px] text-text-dim transition-colors active:border-[#34d399] active:text-[#34d399]"
+        >
+          +15
+        </button>
+        <button
+          onClick={props.onReset}
+          aria-label="dismiss rest timer"
+          className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center text-lg text-text-dim/50 transition-colors active:text-[#ff6b5b]"
+        >
+          ×
+        </button>
+      </div>
+      <div className="text-[10px] tracking-[0.12em] text-text-dim/45 uppercase">
+        live · -15 and +15 adjust · × resets
+      </div>
     </div>
   );
 }
@@ -933,6 +1071,8 @@ function ProgressChart(props: {
 }) {
   const { series, activeIndex, onScrub } = props;
   const ref = useRef<HTMLDivElement>(null);
+  const lineRef = useRef<SVGPathElement>(null);
+  const areaRef = useRef<SVGPathElement>(null);
   const [w, setW] = useState(0);
   const pressing = useRef(false);
 
@@ -970,6 +1110,58 @@ function ProgressChart(props: {
   });
   const area = `${line}L${X(n - 1).toFixed(1)} ${H - padBot} L${X(0).toFixed(1)} ${H - padBot} Z`;
 
+  // Draw-in reveal: the line strokes itself in and the area fades up whenever
+  // the plotted path changes shape (new exercise, new session). Respects
+  // prefers-reduced-motion by snapping straight to the settled state.
+  useEffect(() => {
+    const path = lineRef.current;
+    const fill = areaRef.current;
+    if (!path) return;
+    const length = path.getTotalLength();
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      path.style.transition = "none";
+      path.style.strokeDasharray = "none";
+      path.style.strokeDashoffset = "0";
+      if (fill) {
+        fill.style.transition = "none";
+        fill.style.opacity = "1";
+      }
+      return;
+    }
+
+    path.style.transition = "none";
+    path.style.strokeDasharray = `${length}`;
+    path.style.strokeDashoffset = `${length}`;
+    if (fill) {
+      fill.style.transition = "none";
+      fill.style.opacity = "0";
+    }
+    // Force a reflow so the browser registers the hidden state before the
+    // transition below is allowed to animate it.
+    path.getBoundingClientRect();
+
+    let settle: number | undefined;
+    const raf = requestAnimationFrame(() => {
+      path.style.transition = "stroke-dashoffset 900ms cubic-bezier(0.16, 1, 0.3, 1)";
+      path.style.strokeDashoffset = "0";
+      if (fill) {
+        fill.style.transition = "opacity 700ms ease 250ms";
+        fill.style.opacity = "1";
+      }
+      // Once drawn, drop the dash pattern so a later container resize can't
+      // clip the line against a now-stale total length.
+      settle = window.setTimeout(() => {
+        path.style.transition = "none";
+        path.style.strokeDasharray = "none";
+      }, 950);
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(settle);
+    };
+  }, [line]);
+
   const scrub = (clientX: number) => {
     const el = ref.current;
     if (!el || n < 2) return;
@@ -1006,8 +1198,14 @@ function ProgressChart(props: {
       className="touch-none cursor-ew-resize select-none"
     >
       <svg width={W} height={H} className="block">
-        <path d={area} fill="#34d399" fillOpacity={0.08} />
         <path
+          ref={areaRef}
+          d={area}
+          fill="#34d399"
+          style={{ fillOpacity: 0.08 }}
+        />
+        <path
+          ref={lineRef}
           d={line}
           fill="none"
           stroke="#34d399"
@@ -1160,7 +1358,7 @@ function Sheet(props: { children: ReactNode; onClose: () => void }) {
         className="fixed inset-0 z-[40] bg-black/60 backdrop-blur-[2px]"
       />
       <div
-        className="fixed inset-x-0 bottom-0 z-[41] mx-auto max-w-[460px] rounded-t-[26px] border-x border-t border-white/10 px-5.5 pt-2.5 pb-8"
+        className="fixed inset-x-0 bottom-0 z-[41] mx-auto max-w-[460px] rounded-t-[26px] border-x border-t border-white/10 px-5.5 pt-2.5 pb-[calc(2rem+env(safe-area-inset-bottom))]"
         style={{ background: "#000" }}
       >
         <div className="mx-auto mt-2 mb-4.5 h-1 w-9 rounded-full bg-white/15" />

@@ -105,3 +105,22 @@ function startOfDay(d: Date): Date {
   copy.setHours(0, 0, 0, 0);
   return copy;
 }
+
+/** Monday of the week containing `d` (local time). */
+export function startOfWeek(d: Date): Date {
+  const copy = startOfDay(d);
+  const day = copy.getDay(); // 0 = Sun .. 6 = Sat
+  const diff = (day === 0 ? -6 : 1) - day;
+  copy.setDate(copy.getDate() + diff);
+  return copy;
+}
+
+/** The Mon–Sun week containing `d`, as seven local-midnight Dates. */
+export function getWeekDates(d: Date): Date[] {
+  const start = startOfWeek(d);
+  return Array.from({ length: 7 }, (_, i) => {
+    const c = new Date(start);
+    c.setDate(c.getDate() + i);
+    return c;
+  });
+}

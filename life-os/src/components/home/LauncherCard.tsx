@@ -7,6 +7,8 @@ interface LauncherCardProps {
   subtitle: string;
   emoji?: string;
   icon?: ReactNode;
+  /** Line-art visualization shown in the body of the tile. */
+  viz?: ReactNode;
   tint: string;
   className?: string;
   onOpen: () => void;
@@ -18,6 +20,7 @@ export function LauncherCard({
   subtitle,
   emoji,
   icon,
+  viz,
   tint,
   className = "",
   onOpen,
@@ -29,17 +32,36 @@ export function LauncherCard({
       className={`bento-tile group flex flex-col rounded-[18px] p-5 text-left ${className}`}
     >
       <span aria-hidden className="bento-tile-glow" />
-      <div className="relative flex w-full items-start justify-between">
+      <div className="relative flex w-full shrink-0 items-start justify-between">
         <span className="font-mono text-[11px] tracking-wide text-text-dim">
           ·{String(index).padStart(2, "0")}
         </span>
-        <span
-          className={icon ? "" : "bento-tile-emoji text-[26px] leading-none"}
-        >
-          {icon ?? emoji}
-        </span>
+        {(icon ?? emoji) && (
+          <span
+            aria-hidden
+            className={icon ? "bento-tile-icon" : "bento-tile-emoji text-[26px] leading-none"}
+            style={icon ? { color: "var(--tint)" } : undefined}
+          >
+            {icon ?? emoji}
+          </span>
+        )}
       </div>
-      <div className="relative mt-auto flex w-full items-end justify-between gap-3 pt-6">
+
+      {viz && (
+        <div
+          aria-hidden
+          className="relative flex min-h-0 flex-1 items-center justify-center py-4"
+          style={{ color: "var(--tint)" }}
+        >
+          {viz}
+        </div>
+      )}
+
+      <div
+        className={`relative flex w-full shrink-0 items-end justify-between gap-3 ${
+          viz ? "" : "mt-auto pt-6"
+        }`}
+      >
         <div className="min-w-0">
           <h3 className="font-serif text-[26px] font-normal tracking-tight text-text italic">
             {title}

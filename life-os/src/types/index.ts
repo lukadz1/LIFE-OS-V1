@@ -172,6 +172,7 @@ export interface Exercise {
   step: number;
   startWeight: number;
   bodyweight: boolean;
+  restSeconds: number;
 }
 
 export interface SetLog {
@@ -193,6 +194,23 @@ export interface ProgressPhoto {
   dataUrl: string;
   weightKg: number | null;
   at: string;
+}
+
+export interface CalorieEntry {
+  id: string;
+  label: string;
+  kcal: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  at: string;
+}
+
+export interface CalorieGoals {
+  kcalGoal: number;
+  proteinGoal: number;
+  carbsGoal: number;
+  fatGoal: number;
 }
 
 export type ScoreId = "financial" | "wellness";
