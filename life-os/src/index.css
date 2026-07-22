@@ -14,9 +14,9 @@
   --color-hover: rgba(255, 255, 255, 0.045);
   --color-check: rgba(255, 255, 255, 0.25);
   --color-gauge-track: #26262a;
-  --color-coach-blob-1: #ffffff;
-  --color-coach-blob-2: #f4f0ea;
-  --color-coach-blob-3: #d9d2c6;
+  --color-coach-blob-1: #ffcb9c;
+  --color-coach-blob-2: #fb8a3c;
+  --color-coach-blob-3: #c2410c;
   --color-coach-eye: #12100e;
 
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text",
@@ -169,11 +169,38 @@
       filter: blur(52px) saturate(1.6) brightness(1.14);
     }
   }
+
+  --animate-scrub-pulse: scrub-pulse 1.4s ease-in-out infinite;
+  --animate-pill-in: pill-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Breathing halo behind the chart's hover/feel dots. */
+  @keyframes scrub-pulse {
+    0%,
+    100% {
+      opacity: 0.35;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.75;
+      transform: scale(1.6);
+    }
+  }
+
+  @keyframes pill-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.92);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
 }
 
 :root {
   color-scheme: dark;
-  --coach-glow: 0 0 26px rgba(255, 255, 255, 0.35), 0 10px 30px rgba(0, 0, 0, 0.45);
+  --coach-glow: 0 0 26px rgba(251, 138, 60, 0.45), 0 10px 30px rgba(0, 0, 0, 0.45);
 }
 
 :root[data-theme="light"] {
@@ -191,9 +218,9 @@
   --color-hover: rgba(0, 0, 0, 0.035);
   --color-check: rgba(0, 0, 0, 0.25);
   --color-gauge-track: #e5e5ea;
-  --color-coach-blob-1: #ffffff;
-  --color-coach-blob-2: #efe9df;
-  --color-coach-blob-3: #cdbfae;
+  --color-coach-blob-1: #ffcb9c;
+  --color-coach-blob-2: #fb8a3c;
+  --color-coach-blob-3: #c2410c;
   --color-coach-eye: #12100e;
   /* White-on-white would vanish against the light background — swap the
      soft glow for a warm accent-tinted halo plus a hairline ring so the
@@ -262,18 +289,7 @@ body::before {
     var(--animate-drift),
     var(--animate-glow-pulse);
 }
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image: radial-gradient(rgba(255, 170, 90, 0.022) 1px, transparent 1px);
-  background-size: 3px 3px;
-  pointer-events: none;
-  z-index: -1;
-}
-
-:root[data-theme="light"] body::before,
-:root[data-theme="light"] body::after {
+:root[data-theme="light"] body::before {
   content: none;
 }
 :root[data-theme="light"] body {
@@ -400,12 +416,13 @@ body::after {
 @media (min-width: 1024px) {
   .home-bento {
     grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: repeat(4, minmax(190px, auto));
+    grid-template-rows: repeat(5, minmax(190px, auto));
     grid-template-areas:
       "fuel     peak     peak     todos"
       "fuel     finance  goals    goals"
       "fitness  habits   goals    goals"
-      "calories calories calories calories";
+      "calories calories calories calories"
+      "school   school   school   school";
   }
   .home-bento > .area-fuel {
     grid-area: fuel;
@@ -430,6 +447,9 @@ body::after {
   }
   .home-bento > .area-calories {
     grid-area: calories;
+  }
+  .home-bento > .area-school {
+    grid-area: school;
   }
 }
 

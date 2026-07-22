@@ -96,6 +96,7 @@ export function useFinance() {
   const totalsByCategory = useMemo(() => {
     const totals: Record<AssetCategory, number> = {
       bank: 0,
+      sparkonto: 0,
       stocks: 0,
       crypto: 0,
       other: 0,

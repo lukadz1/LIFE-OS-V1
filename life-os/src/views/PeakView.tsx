@@ -1,57 +1,81 @@
-import { DashboardGrid } from "../components/layout/DashboardGrid";
-import { Panel } from "../components/layout/Panel";
-import { EnergyGraph } from "../components/peak/EnergyGraph";
-import { PeakAdviceCard } from "../components/peak/PeakAdviceCard";
-import { VitalsCard } from "../components/peak/VitalsCard";
+import { useState } from "react";
+import { EnergyCurvePanel } from "../components/peak/EnergyCurvePanel";
+import { ScheduleSection } from "../components/peak/ScheduleSection";
+import { StackGrid } from "../components/peak/StackGrid";
 import { usePeakTracker } from "../hooks/usePeakTracker";
-import { formatHourLabel } from "../utils/peakEngine";
 
 export function PeakView() {
-  const { loading, vitals, result } = usePeakTracker();
+  const {
+    loading,
+    stack,
+    doseLogsToday,
+    feelLogsToday,
+    planToday,
+    eventsToday,
+    addStackItem,
+    removeStackItem,
+    updateStackItemMg,
+    logDose,
+    upsertFeel,
+    addPlanItem,
+    removePlanItem,
+  } = usePeakTracker();
+  const [setupOpen, setSetupOpen] = useState(false);
 
-  if (loading || !vitals || !result) {
+  const dateLabel = new Date()
+    .toLocaleDateString(undefined, {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    })
+    .toUpperCase();
+
+  if (loading) {
     return (
       <div className="py-16 text-center text-sm text-text-dim">
-        Syncing today's vitals…
+        Loading today's peak…
       </div>
     );
   }
 
   return (
-    <DashboardGrid>
-      <Panel
-        title="Peak Tracker"
-        subtitle="Today's energy curve"
-        className="lg:col-span-8"
-      >
-        <EnergyGraph
-          curve={result.curve}
-          focusStartHour={result.focusStartHour}
-          focusEndHour={result.focusEndHour}
-          breakHour={result.breakHour}
+    <div>
+      <div className="pt-1 pb-2">
+        <h1 className="font-serif text-[38px] leading-none font-semibold tracking-tight sm:text-[52px]">
+          Your <em className="text-accent">peak</em> today
+        </h1>
+        <p className="mt-3.5 font-mono text-[11px] tracking-[0.1em] text-text-dim">
+          {dateLabel}
+        </p>
+      </div>
+
+      <div className="mt-8">
+        <StackGrid
+          stack={stack}
+          setupOpen={setupOpen}
+          onToggleSetup={() => setSetupOpen((v) => !v)}
+          onLog={logDose}
+          onRemove={removeStackItem}
+          onUpdateMg={updateStackItemMg}
+          onAdd={addStackItem}
         />
-        <div className="mt-2 grid grid-cols-2 gap-3 border-t border-border pt-3">
-          <div>
-            <p className="font-mono text-[10px] tracking-wide text-text-dim uppercase">
-              Best focus window
-            </p>
-            <p className="mt-0.5 font-mono text-[13px] font-medium text-accent">
-              {formatHourLabel(result.focusStartHour)}–
-              {formatHourLabel(result.focusEndHour)}
-            </p>
-          </div>
-          <div>
-            <p className="font-mono text-[10px] tracking-wide text-text-dim uppercase">
-              Suggested break
-            </p>
-            <p className="mt-0.5 font-mono text-[13px] font-medium text-[#ff9f0a]">
-              {formatHourLabel(result.breakHour)}
-            </p>
-          </div>
-        </div>
-      </Panel>
-      <VitalsCard vitals={vitals} className="lg:col-span-4" />
-      <PeakAdviceCard advice={result.advice} className="lg:col-span-12" />
-    </DashboardGrid>
+      </div>
+
+      <EnergyCurvePanel
+        stack={stack}
+        doseLogsToday={doseLogsToday}
+        feelLogsToday={feelLogsToday}
+        planToday={planToday}
+        onUpsertFeel={upsertFeel}
+        onAddPlan={addPlanItem}
+        onRemovePlan={removePlanItem}
+      />
+
+      <ScheduleSection events={eventsToday} />
+
+      <p className="mt-11 text-center font-mono text-[10px] tracking-[0.08em] text-text-dim/70">
+        ● LIVE · LOG A DOSE AND WATCH YOUR CURVE LIFT
+      </p>
+    </div>
   );
 }

@@ -60,16 +60,6 @@ export interface UserProfile {
   activityHrsPerWeek: number | null;
 }
 
-export interface VitalsToday {
-  hrv: number;
-  hrvBaseline: number;
-  sleepHours: number;
-  sleepQuality: number;
-  restingHr: number;
-  stressLevel: number;
-  bodyBatteryWake: number;
-}
-
 export type FuelKind = "water" | "caffeine" | "meal" | "supplement";
 
 export interface FuelEntry {
@@ -82,7 +72,7 @@ export interface FuelEntry {
 
 export type Currency = "CHF" | "USD" | "EUR" | "GBP";
 
-export type AssetCategory = "bank" | "stocks" | "crypto" | "other";
+export type AssetCategory = "bank" | "sparkonto" | "stocks" | "crypto" | "other";
 
 export interface FinanceAccount {
   id: string;
@@ -96,6 +86,21 @@ export interface FinanceAccount {
 export interface NetWorthSnapshot {
   date: string;
   valueChf: number;
+}
+
+// ---- Bills & debts to pay ----
+
+export type BillDebtKind = "bill" | "debt";
+
+export interface BillDebt {
+  id: string;
+  kind: BillDebtKind;
+  name: string;
+  amountChf: number;
+  dueDate: string | null;
+  recurring: boolean;
+  paid: boolean;
+  createdAt: string;
 }
 
 // ---- Spending / budget tracker (50/30/20) ----
@@ -211,6 +216,52 @@ export interface CalorieGoals {
   proteinGoal: number;
   carbsGoal: number;
   fatGoal: number;
+}
+
+// ---- School (grade tracker) ----
+
+export interface SchoolSubject {
+  id: string;
+  semesterId: number; // 0-5
+  name: string;
+}
+
+export interface SchoolExam {
+  id: string;
+  semesterId: number;
+  subjectId: string;
+  grade: number; // 1.0 (worst) – 6.0 (best)
+  date: string; // ISO
+  fileName: string;
+  fileDataUrl: string | null;
+}
+
+// ---- Peak tracker (caffeine/energy curve) ----
+
+export interface PeakStackItem {
+  id: string;
+  name: string;
+  mg: number;
+}
+
+export interface PeakDoseLog {
+  id: string;
+  itemId: string;
+  mg: number;
+  at: string; // full ISO timestamp of the "Log now" tap
+}
+
+export interface PeakFeelLog {
+  id: string;
+  hour: number; // fractional hour of day, bucketed to the nearest half hour
+  value: number; // 0-100
+  date: string; // ISO YYYY-MM-DD this point belongs to
+}
+
+export interface PeakPlanItem {
+  id: string;
+  text: string;
+  date: string; // ISO YYYY-MM-DD
 }
 
 export type ScoreId = "financial" | "wellness";

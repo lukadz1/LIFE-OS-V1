@@ -8,8 +8,11 @@ import type {
   Gym,
   Habit,
   LifeArea,
+  PeakStackItem,
   RecurringRule,
   SavingsGoal,
+  SchoolExam,
+  SchoolSubject,
   ScoreMetric,
   SetLog,
   SpendCategory,
@@ -217,6 +220,13 @@ export const mockFuelEntries: FuelEntry[] = [
 ];
 
 export const defaultSupplementList = ["Vitamin D", "Omega-3", "Magnesium"];
+
+export const defaultPeakStack: PeakStackItem[] = [
+  { id: "coffee", name: "Coffee", mg: 95 },
+  { id: "espresso", name: "Espresso", mg: 75 },
+  { id: "energy", name: "Energy Drink", mg: 160 },
+  { id: "matcha", name: "Matcha", mg: 70 },
+];
 
 export const mockCalorieEntries: CalorieEntry[] = [
   {
@@ -607,3 +617,70 @@ export const mockSavingsGoals: SavingsGoal[] = [
   { id: "goal-emergency", name: "Notgroschen (3 months)", targetChf: 12000, targetDate: null, manualSavedChf: 4200, linkSavingsBucket: false, linkedCategoryId: "cat-savings", createdAt: "2025-01-01T00:00:00.000Z" },
   { id: "goal-3a", name: "Säule 3a limit 2026", targetChf: 7056, targetDate: `${new Date().getFullYear()}-12-31`, manualSavedChf: 0, linkSavingsBucket: false, linkedCategoryId: "cat-3a", createdAt: "2025-01-01T00:00:00.000Z" },
 ];
+
+// ---- School (grade tracker) seed ----
+// Six subjects across six semesters. Each subject gets one seeded exam whose
+// grade becomes that subject's initial average — semesters closer to index 5
+// are dated more recently so the standing chart reads left-to-right in time.
+
+export const SCHOOL_SEMESTER_LABELS = [
+  "Semester 1",
+  "Semester 2",
+  "Semester 3",
+  "Semester 4",
+  "Semester 5",
+  "Semester 6",
+];
+
+const SCHOOL_SUBJECT_NAMES = [
+  "Mathematics",
+  "English",
+  "Physics",
+  "History",
+  "Biology",
+  "Computer Science",
+];
+
+const SCHOOL_SUBJECT_FILE_SLUGS = ["math", "english", "physics", "history", "biology", "cs"];
+
+// [semesterId][subjectIndex]
+const SCHOOL_SEED_GRADES = [
+  [3.2, 4.8, 2.9, 5.1, 4.0, 5.6],
+  [4.5, 3.6, 4.9, 3.0, 5.0, 4.2],
+  [2.8, 4.4, 3.9, 4.7, 3.5, 5.3],
+  [4.9, 4.1, 3.3, 4.0, 4.6, 3.9],
+  [5.2, 3.8, 4.4, 2.7, 4.9, 5.0],
+  [4.6, 4.9, 4.2, 4.4, 3.4, 5.5],
+];
+
+const SCHOOL_SEMESTER_END_DAYS_AGO = [640, 500, 360, 220, 90, 5];
+const SCHOOL_SUBJECT_DAY_SPREAD = [75, 60, 45, 30, 15, 0];
+
+function schoolSubjectId(semesterId: number, subjectIndex: number): string {
+  return `sub-${semesterId}-${SCHOOL_SUBJECT_FILE_SLUGS[subjectIndex]}`;
+}
+
+export const mockSchoolSubjects: SchoolSubject[] = SCHOOL_SEMESTER_LABELS.flatMap(
+  (_, semesterId) =>
+    SCHOOL_SUBJECT_NAMES.map((name, subjectIndex) => ({
+      id: schoolSubjectId(semesterId, subjectIndex),
+      semesterId,
+      name,
+    })),
+);
+
+export const mockSchoolExams: SchoolExam[] = SCHOOL_SEMESTER_LABELS.flatMap(
+  (_, semesterId) =>
+    SCHOOL_SUBJECT_NAMES.map((_, subjectIndex) => ({
+      id: `exam-${semesterId}-${SCHOOL_SUBJECT_FILE_SLUGS[subjectIndex]}`,
+      semesterId,
+      subjectId: schoolSubjectId(semesterId, subjectIndex),
+      grade: SCHOOL_SEED_GRADES[semesterId][subjectIndex],
+      date: isoDaysFromNow(
+        -(SCHOOL_SEMESTER_END_DAYS_AGO[semesterId] + SCHOOL_SUBJECT_DAY_SPREAD[subjectIndex]),
+        9,
+      ),
+      fileName: `${SCHOOL_SUBJECT_FILE_SLUGS[subjectIndex]}_exam.pdf`,
+      fileDataUrl: null,
+    })),
+);

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BudgetPanel } from "../components/finance/budget/BudgetPanel";
 import { AllocationDonut } from "../components/finance/AllocationDonut";
 import { AssetCategoryCard } from "../components/finance/AssetCategoryCard";
+import { BillsPanel } from "../components/finance/bills/BillsPanel";
 import { CurrencySwitch } from "../components/finance/CurrencySwitch";
 import { NetWorthChart } from "../components/finance/NetWorthChart";
 import { NetWorthHeader } from "../components/finance/NetWorthHeader";
@@ -12,6 +13,7 @@ import type { AssetCategory, Currency } from "../types";
 const TABS = [
   { id: "networth", label: "Net worth" },
   { id: "budget", label: "Budget" },
+  { id: "bills", label: "Bills & Debt" },
 ] as const;
 type FinanceTab = (typeof TABS)[number]["id"];
 
@@ -67,6 +69,8 @@ export function FinanceView() {
 
       {tab === "budget" ? (
         <BudgetPanel currency={currency} />
+      ) : tab === "bills" ? (
+        <BillsPanel currency={currency} />
       ) : loading ? (
         <div className="py-16 text-center text-sm text-text-dim">
           Loading your finances…
@@ -103,6 +107,16 @@ export function FinanceView() {
               pricedMode={false}
               symbolPlaceholder="Account name"
               onAdd={(input) => addAccount("bank", input)}
+              onDelete={deleteAccount}
+            />
+            <AssetCategoryCard
+              title="Sparkonto"
+              accounts={byCategory("sparkonto")}
+              currency={currency}
+              totalChf={totalsByCategory.sparkonto}
+              pricedMode={false}
+              symbolPlaceholder="Account name"
+              onAdd={(input) => addAccount("sparkonto", input)}
               onDelete={deleteAccount}
             />
             <AssetCategoryCard

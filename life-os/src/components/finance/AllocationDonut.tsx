@@ -3,6 +3,7 @@ import { formatMoney } from "../../utils/currency";
 
 const CATEGORY_META: Record<AssetCategory, { label: string; color: string }> = {
   bank: { label: "Bank accounts", color: "#fb5607" },
+  sparkonto: { label: "Sparkonto", color: "#34d399" },
   stocks: { label: "Stocks · investments", color: "#60a5fa" },
   crypto: { label: "Crypto · live", color: "#f59e0b" },
   other: { label: "Other assets", color: "#a78bfa" },

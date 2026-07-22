@@ -14,6 +14,38 @@ export function HomeView({ onNavigate }: HomeViewProps) {
       <GreetingHero name="Luka" />
       <div className="home-bento">
         <LauncherCard
+          index={1}
+          title="Fitness"
+          subtitle="Lifts & progression"
+          tint={ACCENT}
+          className="area-fitness min-h-[180px]"
+          onOpen={() => onNavigate("fitness")}
+        />
+        <LauncherCard
+          index={2}
+          title="School"
+          subtitle="Grades & exams"
+          tint={ACCENT}
+          className="area-school min-h-[180px]"
+          onOpen={() => onNavigate("school")}
+        />
+        <LauncherCard
+          index={3}
+          title="Finance"
+          subtitle="Net worth & spending"
+          tint={ACCENT}
+          className="area-finance min-h-[180px]"
+          onOpen={() => onNavigate("finance")}
+        />
+        <LauncherCard
+          index={4}
+          title="KCAL Tracker"
+          subtitle="KCAL, macros & weight"
+          tint={ACCENT}
+          className="area-calories min-h-[180px]"
+          onOpen={() => onNavigate("calories")}
+        />
+        <LauncherCard
           index={5}
           title="Todays fuel"
           subtitle="Water, caffeine & meals"
@@ -30,15 +62,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
           onOpen={() => onNavigate("peak")}
         />
         <LauncherCard
-          index={8}
-          title="Calories"
-          subtitle="KCAL, macros & weight"
-          tint={ACCENT}
-          className="area-calories min-h-[180px]"
-          onOpen={() => onNavigate("calories")}
-        />
-        <LauncherCard
-          index={1}
+          index={7}
           title="ToDos"
           subtitle="Tasks & priorities"
           tint={ACCENT}
@@ -46,36 +70,20 @@ export function HomeView({ onNavigate }: HomeViewProps) {
           onOpen={() => onNavigate("todos")}
         />
         <LauncherCard
-          index={2}
-          title="Finance"
-          subtitle="Net worth & spending"
-          tint={ACCENT}
-          className="area-finance min-h-[180px]"
-          onOpen={() => onNavigate("finance")}
-        />
-        <LauncherCard
-          index={7}
-          title="Goals"
-          subtitle="Progress & targets"
-          tint={ACCENT}
-          className="area-goals min-h-[200px]"
-          onOpen={() => onNavigate("goals")}
-        />
-        <LauncherCard
-          index={3}
-          title="Fitness"
-          subtitle="Lifts & progression"
-          tint={ACCENT}
-          className="area-fitness min-h-[180px]"
-          onOpen={() => onNavigate("fitness")}
-        />
-        <LauncherCard
-          index={4}
+          index={8}
           title="Habits"
           subtitle="Streaks & routines"
           tint={ACCENT}
           className="area-habits min-h-[180px]"
           onOpen={() => onNavigate("habits")}
+        />
+        <LauncherCard
+          index={9}
+          title="Goals"
+          subtitle="Progress & targets"
+          tint={ACCENT}
+          className="area-goals min-h-[200px]"
+          onOpen={() => onNavigate("goals")}
         />
       </div>
     </div>

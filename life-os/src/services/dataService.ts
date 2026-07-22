@@ -1,5 +1,6 @@
 import {
   defaultCalorieGoals,
+  defaultPeakStack,
   defaultSpendCategories,
   defaultSupplementList,
   lifeAreas,
@@ -11,6 +12,8 @@ import {
   mockHabits,
   mockRecurringRules,
   mockSavingsGoals,
+  mockSchoolExams,
+  mockSchoolSubjects,
   mockScores,
   mockSetLogs,
   mockTasks,
@@ -19,6 +22,7 @@ import {
 } from "../data/mockData";
 import { readStorage, writeStorage } from "../data/storage";
 import type {
+  BillDebt,
   CalendarEvent,
   CalorieEntry,
   CalorieGoals,
@@ -29,9 +33,15 @@ import type {
   Habit,
   LifeArea,
   NetWorthSnapshot,
+  PeakDoseLog,
+  PeakFeelLog,
+  PeakPlanItem,
+  PeakStackItem,
   ProgressPhoto,
   RecurringRule,
   SavingsGoal,
+  SchoolExam,
+  SchoolSubject,
   ScoreMetric,
   SetLog,
   SpendCategory,
@@ -138,6 +148,74 @@ export async function saveNetWorthHistory(
 ): Promise<NetWorthSnapshot[]> {
   writeStorage(NET_WORTH_HISTORY_KEY, history);
   return delay(history);
+}
+
+// ---- Peak tracker (caffeine/energy curve) ----
+
+const PEAK_STACK_KEY = "peak-stack";
+
+export async function getPeakStack(): Promise<PeakStackItem[]> {
+  return delay(readStorage<PeakStackItem[]>(PEAK_STACK_KEY, defaultPeakStack));
+}
+
+export async function savePeakStack(
+  stack: PeakStackItem[],
+): Promise<PeakStackItem[]> {
+  writeStorage(PEAK_STACK_KEY, stack);
+  return delay(stack);
+}
+
+const PEAK_DOSE_LOGS_KEY = "peak-dose-logs";
+
+export async function getPeakDoseLogs(): Promise<PeakDoseLog[]> {
+  return delay(readStorage<PeakDoseLog[]>(PEAK_DOSE_LOGS_KEY, []));
+}
+
+export async function savePeakDoseLogs(
+  logs: PeakDoseLog[],
+): Promise<PeakDoseLog[]> {
+  writeStorage(PEAK_DOSE_LOGS_KEY, logs);
+  return delay(logs);
+}
+
+const PEAK_FEEL_LOGS_KEY = "peak-feel-logs";
+
+export async function getPeakFeelLogs(): Promise<PeakFeelLog[]> {
+  return delay(readStorage<PeakFeelLog[]>(PEAK_FEEL_LOGS_KEY, []));
+}
+
+export async function savePeakFeelLogs(
+  logs: PeakFeelLog[],
+): Promise<PeakFeelLog[]> {
+  writeStorage(PEAK_FEEL_LOGS_KEY, logs);
+  return delay(logs);
+}
+
+const PEAK_PLAN_KEY = "peak-plan";
+
+export async function getPeakPlan(): Promise<PeakPlanItem[]> {
+  return delay(readStorage<PeakPlanItem[]>(PEAK_PLAN_KEY, []));
+}
+
+export async function savePeakPlan(
+  items: PeakPlanItem[],
+): Promise<PeakPlanItem[]> {
+  writeStorage(PEAK_PLAN_KEY, items);
+  return delay(items);
+}
+
+// ---- Bills & debts to pay ----
+// Starts empty (unlike other modules) — real obligations, not a demo.
+
+const BILLS_DEBTS_KEY = "bills-debts";
+
+export async function getBillsDebts(): Promise<BillDebt[]> {
+  return delay(readStorage<BillDebt[]>(BILLS_DEBTS_KEY, []));
+}
+
+export async function saveBillsDebts(items: BillDebt[]): Promise<BillDebt[]> {
+  writeStorage(BILLS_DEBTS_KEY, items);
+  return delay(items);
 }
 
 // ---- Spending: categories / transactions / recurring / savings goals ----
@@ -307,6 +385,28 @@ export async function saveProgressPhotos(
 ): Promise<ProgressPhoto[]> {
   writeStorage(PROGRESS_PHOTOS_KEY, photos);
   return delay(photos);
+}
+
+// ---- School (grade tracker) ----
+// Subjects are seeded per semester and never edited by the user directly —
+// only their exams are. A subject's displayed grade is the average of its
+// exams, computed in useSchool rather than stored here.
+
+const SCHOOL_SUBJECTS_KEY = "school-subjects";
+
+export async function getSchoolSubjects(): Promise<SchoolSubject[]> {
+  return delay(readStorage<SchoolSubject[]>(SCHOOL_SUBJECTS_KEY, mockSchoolSubjects));
+}
+
+const SCHOOL_EXAMS_KEY = "school-exams";
+
+export async function getSchoolExams(): Promise<SchoolExam[]> {
+  return delay(readStorage<SchoolExam[]>(SCHOOL_EXAMS_KEY, mockSchoolExams));
+}
+
+export async function saveSchoolExams(exams: SchoolExam[]): Promise<SchoolExam[]> {
+  writeStorage(SCHOOL_EXAMS_KEY, exams);
+  return delay(exams);
 }
 
 // ---- Scores ----

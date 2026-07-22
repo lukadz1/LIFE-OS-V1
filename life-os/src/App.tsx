@@ -1,5 +1,6 @@
 import { ChevronLeft, Moon, Settings, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
+import { DotGridBackground } from "./components/layout/DotGridBackground";
 import { NavBar, VIEWS, type ViewId } from "./components/layout/NavBar";
 import { StreakChip } from "./components/layout/StreakChip";
 import { SettingsModal } from "./components/settings/SettingsModal";
@@ -15,6 +16,7 @@ import { GoalsView } from "./views/GoalsView";
 import { HabitsView } from "./views/HabitsView";
 import { HomeView } from "./views/HomeView";
 import { PeakView } from "./views/PeakView";
+import { SchoolView } from "./views/SchoolView";
 import { TodosView } from "./views/TodosView";
 
 type Theme = "dark" | "light";
@@ -131,6 +133,7 @@ function App() {
 
   return (
     <div className="mx-auto min-h-[100dvh] max-w-[1600px] px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-10">
+      <DotGridBackground />
       <Header
         theme={theme}
         onToggleTheme={() =>
@@ -177,6 +180,7 @@ function App() {
         {view === "peak" && <PeakView />}
         {view === "calories" && <CaloriesView />}
         {view === "goals" && <GoalsView areas={areas} />}
+        {view === "school" && <SchoolView />}
       </main>
     </div>
   );
