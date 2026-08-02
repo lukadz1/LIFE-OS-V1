@@ -1,4 +1,25 @@
-import { Check, ChevronLeft, Search } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronUp,
+  Dumbbell,
+  History as HistoryIcon,
+  Info,
+  LayoutGrid,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Repeat,
+  Search,
+  Settings,
+  SlidersHorizontal,
+  Star,
+  Undo2,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import {
   useEffect,
   useMemo,
@@ -7,12 +28,18 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
+import { getExerciseInfo } from "../data/exerciseInfo";
 import { useExercises } from "../hooks/useExercises";
-import type { Exercise, SetLog } from "../types";
+import type { Exercise, SetLog, SplitDay } from "../types";
 import { createId } from "../utils/id";
 
 const MINT = "#34d399";
 const AMBER = "#f59e0b";
+const MISS = "#ff6b5b";
+// Every prescribed exercise card asks for this many working sets — a fixed
+// scheme (not a real progression program), just enough to drive the
+// hit-it/miss checklist shown while a session is live.
+const TARGET_SET_COUNT = 4;
 
 // ---------- small helpers ----------
 const ROMAN: [string, number][] = [
@@ -251,16 +278,19 @@ function newExercise(name: string): Omit<Exercise, "id"> {
 }
 
 type Screen =
-  | { name: "today" }
+  | { name: "days" }
+  | { name: "day"; dayId: string }
   | { name: "list" }
+  | { name: "library"; dayId: string }
   | { name: "celebrate" }
   | { name: "chart" | "history"; id: string };
 type Sheet =
   | { mode: "log"; id: string }
   | { mode: "add" }
-  | { mode: "session-add" }
-  | { mode: "session-swap"; exId: string }
   | { mode: "swap"; id: string }
+  | { mode: "tune"; id: string }
+  | { mode: "add-day"; editId?: string }
+  | { mode: "info"; name: string }
   | null;
 type ToastKind = "mint" | "amber" | "neutral";
 
@@ -275,14 +305,24 @@ export function FitnessView() {
     loading,
     exercises,
     setLogs,
+    splitDays,
     addExercise,
     renameExercise,
+    updateExercise,
     deleteExercise,
     logSet,
     deleteSet,
+    addSplitDay,
+    renameSplitDay,
+    deleteSplitDay,
+    setDayExercise,
+    reorderDayExercises,
   } = useExercises();
 
-  const [screen, setScreen] = useState<Screen>({ name: "today" });
+  const [screen, setScreen] = useState<Screen>({ name: "days" });
+  // Where "back" on the chart/history screens should land — the list, or
+  // whichever day session opened them.
+  const [historyReturn, setHistoryReturn] = useState<Screen>({ name: "list" });
   const [sheet, setSheet] = useState<Sheet>(null);
   const [toast, setToast] = useState<{ msg: string; kind: ToastKind } | null>(
     null,
@@ -409,70 +449,36 @@ export function FitnessView() {
     else if (grade === "beat") showToast("beat last time", "mint");
     else showToast("logged");
   };
-  // Add a lift to the session by name — reuse an existing lift, or create it.
-  // Keeps the library open so several can be added in a row.
-  const addExerciseByName = (name: string) => {
+  const removeSessionEntry = (exId: string) =>
+    setSession((prev) => prev.filter((e) => e.exerciseId !== exId));
+
+  // ---------- training day actions ----------
+  // Adds a lift to a day by name — reuse an existing lift, or create it.
+  const addExerciseToDay = (dayId: string, name: string) => {
     const trimmed = name.trim();
     if (!trimmed) return;
     const existing = exercises.find(
       (e) => e.name.toLowerCase() === trimmed.toLowerCase(),
     );
-    if (existing) {
-      setSession((prev) =>
-        prev.some((e) => e.exerciseId === existing.id)
-          ? prev
-          : [...prev, { exerciseId: existing.id, sets: [] }],
-      );
-    } else {
-      const id = addExercise(newExercise(trimmed));
-      setSession((prev) => [...prev, { exerciseId: id, sets: [] }]);
-    }
+    const id = existing ? existing.id : addExercise(newExercise(trimmed));
+    setDayExercise(dayId, id, true);
   };
-  // Replace one exercise in the session with another, carrying the sets already
-  // logged under it. No persistent history is touched — only the draft moves.
-  const swapSessionExercise = (fromExId: string, toName: string) => {
-    const trimmed = toName.trim();
-    if (!trimmed) return;
-    const existing = exercises.find(
-      (e) => e.name.toLowerCase() === trimmed.toLowerCase(),
-    );
-    const toId = existing ? existing.id : addExercise(newExercise(trimmed));
-    setSheet(null);
-    if (toId === fromExId) return;
-    setSession((prev) => {
-      const src = prev.find((e) => e.exerciseId === fromExId);
-      if (!src) return prev;
-      const targetExists = prev.some((e) => e.exerciseId === toId);
-      if (!targetExists) {
-        return prev.map((e) =>
-          e.exerciseId === fromExId ? { ...e, exerciseId: toId } : e,
-        );
-      }
-      // Target already in the session — merge the moved sets into it.
-      return prev
-        .map((e) =>
-          e.exerciseId === toId ? { ...e, sets: [...e.sets, ...src.sets] } : e,
-        )
-        .filter((e) => e.exerciseId !== fromExId);
-    });
-    showToast("swapped");
+  const removeExerciseFromDay = (dayId: string, exId: string) => {
+    setDayExercise(dayId, exId, false);
+    removeSessionEntry(exId);
   };
-  const removeSessionEntry = (exId: string) =>
-    setSession((prev) => prev.filter((e) => e.exerciseId !== exId));
-  const removeSessionSet = (exId: string, setId: string) =>
-    setSession((prev) =>
-      prev.map((e) =>
-        e.exerciseId === exId
-          ? { ...e, sets: e.sets.filter((s) => s.id !== setId) }
-          : e,
-      ),
-    );
-  const doFinish = () => {
+  // Finishes only the sets logged for one day's exercises, leaving any other
+  // day's in-progress draft untouched.
+  const doFinishDay = (dayId: string) => {
+    const day = splitDays.find((d) => d.id === dayId);
+    if (!day) return;
+    const dayIds = new Set(day.exerciseIds);
     const items: CelebrationItem[] = [];
     let beats = 0;
     let prs = 0;
     let totalSets = 0;
     for (const entry of session) {
+      if (!dayIds.has(entry.exerciseId)) continue;
       const ex = byId[entry.exerciseId];
       if (!ex || entry.sets.length === 0) continue;
       const base = baselineFor(setsFor(setLogs, entry.exerciseId));
@@ -489,10 +495,12 @@ export function FitnessView() {
       items.push({ name: ex.name, setCount: entry.sets.length, top, grade: best });
     }
     if (totalSets === 0) return;
-    for (const entry of session)
+    for (const entry of session) {
+      if (!dayIds.has(entry.exerciseId)) continue;
       for (const s of entry.sets) logSet(entry.exerciseId, s.weight, s.reps);
+    }
     setCelebration({ items, beats, prs, totalSets });
-    setSession([]);
+    setSession((prev) => prev.filter((e) => !dayIds.has(e.exerciseId)));
     setScreen({ name: "celebrate" });
   };
 
@@ -502,7 +510,7 @@ export function FitnessView() {
     body = (
       <CelebrateScreen
         data={celebration}
-        onDone={() => setScreen({ name: "today" })}
+        onDone={() => setScreen({ name: "days" })}
       />
     );
   } else if (screen.name === "chart" && byId[screen.id]) {
@@ -510,7 +518,7 @@ export function FitnessView() {
       <ChartScreen
         exercise={byId[screen.id]}
         sets={setsFor(setLogs, screen.id)}
-        onBack={() => setScreen({ name: "list" })}
+        onBack={() => setScreen(historyReturn)}
         onLog={() => setSheet({ mode: "log", id: screen.id })}
       />
     );
@@ -519,7 +527,7 @@ export function FitnessView() {
       <HistoryScreen
         exercise={byId[screen.id]}
         sets={setsFor(setLogs, screen.id)}
-        onBack={() => setScreen({ name: "list" })}
+        onBack={() => setScreen(historyReturn)}
         onLog={() => setSheet({ mode: "log", id: screen.id })}
         onRemove={(sid) => {
           deleteSet(sid);
@@ -537,36 +545,87 @@ export function FitnessView() {
         onQuick={(name) => addExercise(newExercise(name))}
         onLog={(id) => setSheet({ mode: "log", id })}
         onSwap={(id) => setSheet({ mode: "swap", id })}
-        onChart={(id) => setScreen({ name: "chart", id })}
-        onHistory={(id) => setScreen({ name: "history", id })}
+        onChart={(id) => {
+          setHistoryReturn({ name: "list" });
+          setScreen({ name: "chart", id });
+        }}
+        onHistory={(id) => {
+          setHistoryReturn({ name: "list" });
+          setScreen({ name: "history", id });
+        }}
       />
     );
-  } else {
-    body = (
-      <TodayScreen
+  } else if (screen.name === "library") {
+    const day = splitDays.find((d) => d.id === screen.dayId);
+    body = day ? (
+      <LibraryScreen
+        exercises={exercises}
+        dayName={day.name}
+        dayExerciseIds={new Set(day.exerciseIds)}
+        onToggle={(name, included) =>
+          included
+            ? addExerciseToDay(day.id, name)
+            : (() => {
+                const ex = exercises.find(
+                  (e) => e.name.toLowerCase() === name.toLowerCase(),
+                );
+                if (ex) removeExerciseFromDay(day.id, ex.id);
+              })()
+        }
+        onInfo={(name) => setSheet({ mode: "info", name })}
+        onBack={() => setScreen({ name: "day", dayId: day.id })}
+      />
+    ) : null;
+  } else if (screen.name === "day") {
+    const day = splitDays.find((d) => d.id === screen.dayId);
+    body = day ? (
+      <DaySessionScreen
+        day={day}
+        days={splitDays}
         session={session}
         byId={byId}
         setLogs={setLogs}
-        onAddExercise={() => setSheet({ mode: "session-add" })}
+        onBack={() => setScreen({ name: "days" })}
+        onSwitchDay={(id) => setScreen({ name: "day", dayId: id })}
+        onRenameDay={() => setSheet({ mode: "add-day", editId: day.id })}
+        onDeleteDay={() => {
+          deleteSplitDay(day.id);
+          setScreen({ name: "days" });
+        }}
+        onAddExercise={() => setScreen({ name: "library", dayId: day.id })}
         onLogSet={logIntoSession}
-        onRemoveSet={removeSessionSet}
-        onRemoveEntry={removeSessionEntry}
-        onSwapEntry={(exId) => setSheet({ mode: "session-swap", exId })}
-        onFinish={doFinish}
+        onRemoveEntry={(exId) => removeExerciseFromDay(day.id, exId)}
+        onSwapEntry={(exId) => setSheet({ mode: "swap", id: exId })}
+        onTuneEntry={(exId) => setSheet({ mode: "tune", id: exId })}
+        onHistoryEntry={(exId) => {
+          setHistoryReturn({ name: "day", dayId: day.id });
+          setScreen({ name: "history", id: exId });
+        }}
+        onToggleStar={(exId) =>
+          updateExercise(exId, { starred: !byId[exId]?.starred })
+        }
+        onReorder={(exId, dir) => reorderDayExercises(day.id, exId, dir)}
+        onFinish={() => doFinishDay(day.id)}
+      />
+    ) : null;
+  } else {
+    body = (
+      <DaysScreen
+        days={splitDays}
+        session={session}
+        onOpenDay={(id) => setScreen({ name: "day", dayId: id })}
+        onAddDay={() => setSheet({ mode: "add-day" })}
+        onRenameDay={(id) => setSheet({ mode: "add-day", editId: id })}
+        onDeleteDay={(id) => deleteSplitDay(id)}
+        onOpenList={() => setScreen({ name: "list" })}
       />
     );
   }
 
-  const showTabs = screen.name === "today" || screen.name === "list";
-
   return (
     <div className="animate-view-in-right motion-reduce:animate-none">
-      {showTabs && (
-        <Tabs
-          active={screen.name === "today" ? "today" : "lifts"}
-          onToday={() => setScreen({ name: "today" })}
-          onLifts={() => setScreen({ name: "list" })}
-        />
+      {screen.name === "list" && (
+        <BackLink onClick={() => setScreen({ name: "days" })} />
       )}
       {body}
 
@@ -581,36 +640,6 @@ export function FitnessView() {
       {sheet?.mode === "add" && (
         <AddSheet onClose={() => setSheet(null)} onSave={doAdd} />
       )}
-      {sheet?.mode === "session-add" && (
-        <LibrarySheet
-          exercises={exercises}
-          heading="exercise library"
-          subtitle="Search or browse by muscle — tap to add."
-          closeLabel="done"
-          markAdded
-          inSessionNames={
-            new Set(
-              session
-                .map((e) => byId[e.exerciseId]?.name.toLowerCase())
-                .filter((n): n is string => Boolean(n)),
-            )
-          }
-          onPick={addExerciseByName}
-          onClose={() => setSheet(null)}
-        />
-      )}
-      {sheet?.mode === "session-swap" && (
-        <LibrarySheet
-          exercises={exercises}
-          heading="swap exercise"
-          subtitle="Pick a replacement — your logged sets come with it."
-          closeLabel="cancel"
-          markAdded={false}
-          inSessionNames={new Set()}
-          onPick={(name) => swapSessionExercise(sheet.exId, name)}
-          onClose={() => setSheet(null)}
-        />
-      )}
       {sheet?.mode === "swap" && byId[sheet.id] && (
         <SwapSheet
           exercise={byId[sheet.id]}
@@ -618,6 +647,38 @@ export function FitnessView() {
           onSave={(name) => doSwap(sheet.id, name)}
           onRemove={() => doRemoveExercise(sheet.id)}
         />
+      )}
+      {sheet?.mode === "tune" && byId[sheet.id] && (
+        <TuneSheet
+          exercise={byId[sheet.id]}
+          onClose={() => setSheet(null)}
+          onSave={(patch) => {
+            updateExercise(sheet.id, patch);
+            setSheet(null);
+            showToast("tuned");
+          }}
+        />
+      )}
+      {sheet?.mode === "add-day" && (
+        <AddDaySheet
+          editingDay={
+            sheet.editId ? (splitDays.find((d) => d.id === sheet.editId) ?? null) : null
+          }
+          onClose={() => setSheet(null)}
+          onCreate={(name) => {
+            if (sheet.editId) {
+              renameSplitDay(sheet.editId, name);
+              setSheet(null);
+            } else {
+              const id = addSplitDay(name);
+              setSheet(null);
+              setScreen({ name: "day", dayId: id });
+            }
+          }}
+        />
+      )}
+      {sheet?.mode === "info" && (
+        <ExerciseInfoSheet name={sheet.name} onClose={() => setSheet(null)} />
       )}
 
       {toast && (
@@ -735,28 +796,6 @@ function RestTimerBar(props: {
   );
 }
 
-// ---------- tabs ----------
-function Tabs(props: {
-  active: "today" | "lifts";
-  onToday: () => void;
-  onLifts: () => void;
-}) {
-  const pill = (on: boolean) =>
-    `rounded-full px-5 py-2 font-serif text-[18px] lowercase italic transition-colors ${
-      on ? "bg-white/10 text-text" : "text-text-dim"
-    }`;
-  return (
-    <div className="mb-5 inline-flex rounded-full border border-border p-1">
-      <button className={pill(props.active === "today")} onClick={props.onToday}>
-        today
-      </button>
-      <button className={pill(props.active === "lifts")} onClick={props.onLifts}>
-        lifts
-      </button>
-    </div>
-  );
-}
-
 // ---------- list ----------
 function ListScreen(props: {
   exercises: Exercise[];
@@ -838,7 +877,7 @@ function LiftCard(props: {
   const rm = best1RM(props.sets);
   const best = bestSet(props.sets);
   return (
-    <article className="mb-3.5 rounded-[18px] border border-border px-5 pt-5 pb-3.5">
+    <article className="glass-card mb-3.5 rounded-[18px] px-5 pt-5 pb-3.5">
       <div className="flex items-center gap-3">
         <span className="min-w-[22px] font-serif text-[17px] text-text-dim/50 italic">
           {toRoman(props.index + 1)}
@@ -918,7 +957,7 @@ function ActionWord(props: { label: string; lead?: boolean; onClick: () => void 
   return (
     <button
       onClick={props.onClick}
-      className={`min-h-11 flex-1 py-2 font-serif text-[19px] lowercase italic transition-colors active:text-accent ${
+      className={`min-h-13 flex-1 py-3 font-serif text-[23px] lowercase italic transition-colors active:text-accent ${
         props.lead ? "text-text" : "text-text-dim"
       }`}
     >
@@ -978,7 +1017,7 @@ function ChartScreen(props: {
         </div>
       ) : (
         <>
-          <div className="mt-6 rounded-[18px] border border-border p-4">
+          <div className="glass-card mt-6 rounded-[18px] p-4">
             {/* readout that follows the scrubber */}
             <div className="mb-3 flex items-end justify-between">
               <div>
@@ -1053,7 +1092,7 @@ function ChartScreen(props: {
 
 function StatTile(props: { label: string; mint?: boolean; children: ReactNode }) {
   return (
-    <div className="flex-1 rounded-2xl border border-border px-3.5 py-4">
+    <div className="glass-card flex-1 rounded-2xl px-3.5 py-4">
       <div
         className={`text-2xl font-bold tracking-tight ${props.mint ? "text-[#34d399]" : ""}`}
       >
@@ -1537,6 +1576,37 @@ function SwapSheet(props: {
   );
 }
 
+function TuneSheet(props: {
+  exercise: Exercise;
+  onClose: () => void;
+  onSave: (patch: { step: number; restSeconds: number; repMin: number }) => void;
+}) {
+  const [step, setStep] = useState(props.exercise.step || 2.5);
+  const [restSeconds, setRestSeconds] = useState(props.exercise.restSeconds || 90);
+  const [repMin, setRepMin] = useState(props.exercise.repMin || 5);
+  return (
+    <Sheet onClose={props.onClose}>
+      <h3 className="font-serif text-[30px]">tune</h3>
+      <div className="mb-4 font-serif text-sm text-text-dim italic">
+        {props.exercise.name}
+      </div>
+      <div className="flex gap-3">
+        <CompactStepper label={`weight step · ${UNIT}`} value={step} step={0.5} onChange={setStep} />
+        <CompactStepper label="target reps" value={repMin} step={1} onChange={setRepMin} />
+      </div>
+      <div className="mt-4">
+        <CompactStepper label="rest · seconds" value={restSeconds} step={15} onChange={setRestSeconds} />
+      </div>
+      <div className="mt-5 flex gap-2.5">
+        <PillGhost onClick={props.onClose}>cancel</PillGhost>
+        <PillPrimary onClick={() => props.onSave({ step, restSeconds, repMin })}>
+          save
+        </PillPrimary>
+      </div>
+    </Sheet>
+  );
+}
+
 function PillPrimary(props: { children: ReactNode; onClick: () => void }) {
   return (
     <button
@@ -1558,161 +1628,436 @@ function PillGhost(props: { children: ReactNode; onClick: () => void }) {
   );
 }
 
-// ================= PART 2 — today's session =================
+// ================= PART 2 — a training day's session =================
 
-function TodayScreen(props: {
+function DaySessionScreen(props: {
+  day: SplitDay;
+  days: SplitDay[];
   session: SessionEntry[];
   byId: Record<string, Exercise>;
   setLogs: SetLog[];
+  onBack: () => void;
+  onSwitchDay: (id: string) => void;
+  onRenameDay: () => void;
+  onDeleteDay: () => void;
   onAddExercise: () => void;
   onLogSet: (exId: string, w: number, r: number) => void;
-  onRemoveSet: (exId: string, setId: string) => void;
   onRemoveEntry: (exId: string) => void;
   onSwapEntry: (exId: string) => void;
+  onTuneEntry: (exId: string) => void;
+  onHistoryEntry: (exId: string) => void;
+  onToggleStar: (exId: string) => void;
+  onReorder: (exId: string, direction: "up" | "down") => void;
   onFinish: () => void;
 }) {
-  const live = props.session.filter((e) => props.byId[e.exerciseId]);
-  const totalSets = live.reduce((a, e) => a + e.sets.length, 0);
+  const [reorderMode, setReorderMode] = useState(false);
+  const [dayMenuOpen, setDayMenuOpen] = useState(false);
 
-  if (live.length === 0) {
-    return (
-      <div className="py-6">
-        <p className="mb-7 max-w-[22ch] font-serif text-[26px] leading-snug italic">
-          A fresh session. Add a lift and log your first set.
-        </p>
-        <button
-          onClick={props.onAddExercise}
-          className="rounded-full bg-accent px-7 py-3.5 font-serif text-[20px] text-black italic"
-        >
-          add an exercise
-        </button>
-      </div>
-    );
-  }
+  const bySession = new Map(props.session.map((e) => [e.exerciseId, e]));
+  // Every exercise assigned to the day gets a card — even before its first
+  // set is logged today — so "add exercise" always shows up immediately.
+  const live: SessionEntry[] = props.day.exerciseIds
+    .filter((id) => props.byId[id])
+    .map((id) => bySession.get(id) ?? { exerciseId: id, sets: [] });
+  const totalSets = live.reduce((a, e) => a + e.sets.length, 0);
+  const totalTarget = live.length * TARGET_SET_COUNT;
 
   return (
     <div className="pb-4">
-      <div className="mb-3.5 ml-0.5 text-[11px] font-semibold tracking-[0.16em] text-text-dim/60 uppercase">
-        Today’s session · {totalSets} {totalSets === 1 ? "set" : "sets"}
-      </div>
-      {live.map((entry, i) => {
-        const ex = props.byId[entry.exerciseId];
-        return (
-          <SessionCard
-            key={entry.exerciseId}
-            index={i}
-            exercise={ex}
-            entry={entry}
-            setLogs={props.setLogs}
-            onLog={(w, r) => props.onLogSet(entry.exerciseId, w, r)}
-            onRemoveSet={(sid) => props.onRemoveSet(entry.exerciseId, sid)}
-            onSwap={() => props.onSwapEntry(entry.exerciseId)}
-            onRemove={() => props.onRemoveEntry(entry.exerciseId)}
-          />
-        );
-      })}
-      <button
-        onClick={props.onAddExercise}
-        className="mt-1 w-full rounded-full border border-white/15 px-7 py-3 font-serif text-[19px] text-text-dim italic"
-      >
-        add an exercise
-      </button>
-      {totalSets > 0 && (
+      <div className="mb-4 flex items-center justify-between">
         <button
-          onClick={props.onFinish}
-          className="mt-4 w-full rounded-full bg-accent px-7 py-4 font-serif text-[22px] text-black italic shadow-[0_10px_30px_rgba(251,86,7,0.28)]"
+          onClick={props.onBack}
+          className="flex items-center gap-1.5 font-serif text-[19px] text-text-dim italic"
         >
-          finish session
+          <ChevronLeft size={16} /> Today’s session
         </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setReorderMode((v) => !v)}
+            className={`flex items-center gap-1.5 rounded-full border px-4 py-1.5 font-serif text-[15px] italic transition-colors ${
+              reorderMode ? "border-accent text-accent" : "border-white/15 text-text-dim"
+            }`}
+          >
+            <Repeat size={13} /> reorder
+          </button>
+          <div className="relative">
+            <button
+              onClick={() => setDayMenuOpen((v) => !v)}
+              aria-label="day settings"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-text-dim active:text-text"
+            >
+              <Settings size={15} />
+            </button>
+            {dayMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setDayMenuOpen(false)}
+                />
+                <div className="absolute top-11 right-0 z-20 overflow-hidden rounded-xl border border-border bg-surface shadow-lg">
+                  <button
+                    onClick={() => {
+                      setDayMenuOpen(false);
+                      props.onRenameDay();
+                    }}
+                    className="block w-full px-4 py-2.5 text-left text-sm whitespace-nowrap text-text active:bg-white/5"
+                  >
+                    rename day
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDayMenuOpen(false);
+                      props.onDeleteDay();
+                    }}
+                    className="block w-full px-4 py-2.5 text-left text-sm whitespace-nowrap text-[#ff6b5b] active:bg-white/5"
+                  >
+                    delete day
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-3 flex items-center gap-2">
+        <h2 className="font-serif text-[32px] leading-none font-semibold not-italic">
+          {props.day.name}
+        </h2>
+        <button
+          onClick={props.onRenameDay}
+          aria-label="rename day"
+          className="text-text-dim/50 active:text-accent"
+        >
+          <Pencil size={15} />
+        </button>
+      </div>
+
+      {props.days.length > 1 && (
+        <DayTabs days={props.days} activeId={props.day.id} onSwitch={props.onSwitchDay} />
+      )}
+
+      {live.length > 0 && (
+        <div className="mb-4 text-right text-[13px] font-medium text-text-dim">
+          {totalSets} of {totalTarget} logged
+        </div>
+      )}
+
+      {live.length === 0 ? (
+        <div className="py-6">
+          <p className="mb-7 max-w-[22ch] font-serif text-[26px] leading-snug italic">
+            Nothing assigned yet. Add the lifts you train this day.
+          </p>
+          <button
+            onClick={props.onAddExercise}
+            className="rounded-full bg-accent px-7 py-3.5 font-serif text-[20px] text-black italic"
+          >
+            add an exercise
+          </button>
+        </div>
+      ) : (
+        <>
+          {live.map((entry, i) => {
+            const ex = props.byId[entry.exerciseId];
+            return (
+              <SessionCard
+                key={entry.exerciseId}
+                exercise={ex}
+                entry={entry}
+                setLogs={props.setLogs}
+                reorderMode={reorderMode}
+                canMoveUp={i > 0}
+                canMoveDown={i < live.length - 1}
+                onMove={(direction) => props.onReorder(entry.exerciseId, direction)}
+                onLog={(w, r) => props.onLogSet(entry.exerciseId, w, r)}
+                onSwap={() => props.onSwapEntry(entry.exerciseId)}
+                onTune={() => props.onTuneEntry(entry.exerciseId)}
+                onHistory={() => props.onHistoryEntry(entry.exerciseId)}
+                onToggleStar={() => props.onToggleStar(entry.exerciseId)}
+                onRemove={() => props.onRemoveEntry(entry.exerciseId)}
+              />
+            );
+          })}
+          <button
+            onClick={props.onAddExercise}
+            className="mt-1 flex w-full items-center justify-center gap-2 rounded-full border border-white/15 px-7 py-3 font-serif text-[19px] text-text-dim italic"
+          >
+            <LayoutGrid size={16} /> Add a lift
+          </button>
+
+          <button
+            onClick={props.onFinish}
+            disabled={totalSets === 0}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-full border px-7 py-4 font-serif text-[22px] italic transition-opacity disabled:opacity-45"
+            style={{ borderColor: `${MINT}55`, background: `${MINT}22`, color: MINT }}
+          >
+            <Check size={20} /> Finish session
+          </button>
+          {totalSets === 0 && (
+            <p className="mt-2.5 text-center font-serif text-[14px] text-text-dim/60 italic">
+              Log a set to finish your session
+            </p>
+          )}
+
+          <p className="mt-8 text-center text-[12px] text-text-dim/40 italic">
+            Saved on this device. Log a set, close the tab, it is still here.
+          </p>
+        </>
       )}
     </div>
   );
 }
 
+function DayTabs(props: {
+  days: SplitDay[];
+  activeId: string;
+  onSwitch: (id: string) => void;
+}) {
+  return (
+    <div className="mb-4 flex gap-5 border-b border-border">
+      {props.days.map((d) => {
+        const active = d.id === props.activeId;
+        return (
+          <button
+            key={d.id}
+            onClick={() => props.onSwitch(d.id)}
+            className={`-mb-px border-b-[3px] pb-2.5 text-[11px] font-semibold tracking-[0.14em] uppercase transition-colors ${
+              active ? "text-text" : "border-transparent text-text-dim/50"
+            }`}
+            style={
+              active
+                ? { borderBottomColor: MINT, borderBottomStyle: "dotted" }
+                : undefined
+            }
+          >
+            {d.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function SessionCard(props: {
-  index: number;
   exercise: Exercise;
   entry: SessionEntry;
   setLogs: SetLog[];
+  reorderMode: boolean;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onMove: (direction: "up" | "down") => void;
   onLog: (w: number, r: number) => void;
-  onRemoveSet: (setId: string) => void;
   onSwap: () => void;
+  onTune: () => void;
+  onHistory: () => void;
+  onToggleStar: () => void;
   onRemove: () => void;
 }) {
   const history = setsFor(props.setLogs, props.exercise.id);
-  const base = baselineFor(history);
-  const lastSess = props.entry.sets[props.entry.sets.length - 1];
+  const firstTime = history.length === 0;
   const lastHist = history[history.length - 1];
-  const initial = lastSess
-    ? { weight: lastSess.weight, reps: lastSess.reps }
-    : lastHist
-      ? { weight: lastHist.weight, reps: lastHist.reps }
-      : {
-          weight: props.exercise.startWeight || 20,
-          reps: props.exercise.repMin || 5,
-        };
+  // The prescribed weight×reps for every slot this session — a fixed target,
+  // not something that adapts set-to-set.
+  const target = lastHist
+    ? { weight: lastHist.weight, reps: lastHist.reps }
+    : { weight: props.exercise.startWeight || 20, reps: props.exercise.repMin || 5 };
+
+  // One status per prescribed slot. Hitting a slot also logs a real set;
+  // missing one stays local — a failed attempt was never actually lifted.
+  const [slots, setSlots] = useState<("pending" | "hit" | "missed")[]>(() =>
+    Array.from({ length: TARGET_SET_COUNT }, (_, i) =>
+      i < props.entry.sets.length ? "hit" : "pending",
+    ),
+  );
+
+  const hit = (i: number) => {
+    if (slots[i] !== "pending") return;
+    setSlots((prev) => prev.map((s, j) => (j === i ? "hit" : s)));
+    props.onLog(target.weight, target.reps);
+  };
+  const miss = (i: number) => {
+    if (slots[i] !== "pending") return;
+    setSlots((prev) => prev.map((s, j) => (j === i ? "missed" : s)));
+  };
+  const undo = (i: number) => {
+    setSlots((prev) => prev.map((s, j) => (j === i ? "pending" : s)));
+  };
 
   return (
-    <article className="mb-3.5 rounded-[18px] border border-border px-5 pt-5 pb-4">
-      <div className="flex items-center gap-3">
-        <span className="min-w-[22px] font-serif text-[17px] text-text-dim/50 italic">
-          {toRoman(props.index + 1)}
-        </span>
-        <h3 className="min-w-0 flex-1 truncate font-serif text-[25px] leading-tight italic">
+    <article className="glass-card mb-3.5 rounded-[18px] px-5 pt-5 pb-4">
+      <div className="flex items-center gap-2.5">
+        {props.reorderMode ? (
+          <div className="flex flex-col">
+            <button
+              onClick={() => props.onMove("up")}
+              disabled={!props.canMoveUp}
+              aria-label="move up"
+              className="text-text-dim disabled:opacity-25 active:text-accent"
+            >
+              <ChevronUp size={16} />
+            </button>
+            <button
+              onClick={() => props.onMove("down")}
+              disabled={!props.canMoveDown}
+              aria-label="move down"
+              className="text-text-dim disabled:opacity-25 active:text-accent"
+            >
+              <ChevronDown size={16} />
+            </button>
+          </div>
+        ) : (
+          <Dumbbell size={16} className="shrink-0 text-accent/70" />
+        )}
+        <h3 className="min-w-0 flex-1 truncate font-serif text-[24px] leading-tight font-semibold not-italic">
           {props.exercise.name}
         </h3>
         <button
-          onClick={props.onSwap}
-          className="font-serif text-[16px] text-text-dim/50 italic active:text-accent"
+          onClick={props.onHistory}
+          aria-label="exercise info"
+          className="text-text-dim/50 active:text-accent"
         >
-          swap
+          <Info size={16} />
         </button>
         <button
           onClick={props.onRemove}
-          className="font-serif text-[16px] text-text-dim/50 italic active:text-[#ff6b5b]"
+          aria-label="remove from today"
+          className="text-text-dim/50 active:text-[#ff6b5b]"
         >
-          remove
+          <X size={17} />
         </button>
       </div>
 
-      {props.entry.sets.length > 0 ? (
-        <div className="mt-3">
-          {props.entry.sets.map((s, i) => (
-            <div
-              key={s.id}
-              className="flex items-center gap-3 border-t border-border py-2.5 first:border-t-0"
-            >
-              <span className="min-w-[24px] font-serif text-[14px] text-text-dim/50 italic">
-                {toRoman(i + 1)}
-              </span>
-              <span className="flex-1 text-[17px] font-semibold">
-                {fmt(s.weight)}
-                <span className="text-sm font-normal text-text-dim"> {UNIT}</span>{" "}
-                × {s.reps}
-              </span>
-              <GradeBadge grade={gradeValue(epley(s.weight, s.reps), base)} />
-              <button
-                onClick={() => props.onRemoveSet(s.id)}
-                aria-label="remove set"
-                className="ml-1 px-1 text-lg text-text-dim/40 active:text-[#ff6b5b]"
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="mt-3 text-sm text-text-dim/70">
-          No sets yet — log your first below.
-        </p>
-      )}
+      <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] tracking-[0.1em] text-text-dim/60 uppercase">
+        <span className="rounded-full border border-border px-2 py-0.5">Tier 1</span>
+        <span>
+          · {TARGET_SET_COUNT} × {target.reps}
+        </span>
+        {firstTime && <span>· First time · Set the mark</span>}
+      </div>
 
-      <InlineLogger
-        exercise={props.exercise}
-        initial={initial}
-        onLog={props.onLog}
-      />
+      <div className="mt-3 flex items-center gap-1 border-t border-border pt-2.5">
+        <IconWord label="swap" icon={Repeat} onClick={props.onSwap} />
+        <IconWord label="history" icon={HistoryIcon} onClick={props.onHistory} />
+        <IconWord label="tune" icon={SlidersHorizontal} onClick={props.onTune} />
+        <button
+          onClick={props.onSwap}
+          aria-label="more"
+          className="flex h-8 w-8 shrink-0 items-center justify-center text-text-dim/50 active:text-text"
+        >
+          <MoreHorizontal size={17} />
+        </button>
+        <button
+          onClick={props.onToggleStar}
+          aria-label={props.exercise.starred ? "unstar" : "star"}
+          className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center"
+        >
+          <Star
+            size={18}
+            className={props.exercise.starred ? "text-[#34d399]" : "text-text-dim/40"}
+            fill={props.exercise.starred ? MINT : "none"}
+          />
+        </button>
+      </div>
+
+      <div className="mt-1">
+        {slots.map((status, i) => (
+          <TargetSetRow
+            key={i}
+            index={i}
+            weight={target.weight}
+            reps={target.reps}
+            status={status}
+            onHit={() => hit(i)}
+            onMiss={() => miss(i)}
+            onUndo={() => undo(i)}
+          />
+        ))}
+      </div>
     </article>
+  );
+}
+
+function IconWord(props: { label: string; icon: LucideIcon; onClick: () => void }) {
+  const Icon = props.icon;
+  return (
+    <button
+      onClick={props.onClick}
+      className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 font-serif text-[15px] text-text-dim italic active:text-accent"
+    >
+      <Icon size={14} />
+      {props.label}
+    </button>
+  );
+}
+
+function TargetSetRow(props: {
+  index: number;
+  weight: number;
+  reps: number;
+  status: "pending" | "hit" | "missed";
+  onHit: () => void;
+  onMiss: () => void;
+  onUndo: () => void;
+}) {
+  const missed = props.status === "missed";
+  return (
+    <div
+      className={`mt-2 flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
+        missed ? "bg-[#ff6b5b]/[0.07]" : "border-transparent"
+      }`}
+      style={missed ? { borderColor: `${MISS}55` } : undefined}
+    >
+      <span className="min-w-[20px] font-serif text-[14px] text-text-dim/50 italic">
+        {toRoman(props.index + 1)}
+      </span>
+      <span
+        className={`flex-1 text-[17px] font-semibold ${
+          missed ? "text-text-dim/50 line-through decoration-2" : ""
+        }`}
+      >
+        {fmt(props.weight)}
+        <span className="text-sm font-normal text-text-dim"> {UNIT}</span> ×{" "}
+        {props.reps}
+      </span>
+
+      {props.status === "pending" && (
+        <div className="flex items-center gap-3.5">
+          <button
+            onClick={props.onHit}
+            className="flex items-center gap-1 font-serif text-[16px] italic"
+            style={{ color: MINT }}
+          >
+            hit it <ArrowRight size={14} />
+          </button>
+          <button
+            onClick={props.onMiss}
+            className="font-serif text-[16px] text-text-dim/50 italic"
+          >
+            miss
+          </button>
+        </div>
+      )}
+      {props.status === "hit" && (
+        <div className="flex items-center gap-1.5" style={{ color: MINT }}>
+          <Check size={15} />
+          <span className="text-[13px] tracking-[0.08em] uppercase">logged</span>
+        </div>
+      )}
+      {missed && (
+        <div className="flex items-center gap-2.5">
+          <span className="font-serif text-[16px] italic" style={{ color: MISS }}>
+            missed
+          </span>
+          <button
+            onClick={props.onUndo}
+            aria-label="undo miss"
+            className="text-text-dim/50 active:text-text"
+          >
+            <Undo2 size={15} />
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1778,45 +2123,219 @@ function CompactStepper(props: {
   );
 }
 
-function InlineLogger(props: {
-  exercise: Exercise;
-  initial: { weight: number; reps: number };
-  onLog: (w: number, r: number) => void;
+
+// ================= PART 3 — the day split (landing screen) =================
+
+function DaysScreen(props: {
+  days: SplitDay[];
+  session: SessionEntry[];
+  onOpenDay: (id: string) => void;
+  onAddDay: () => void;
+  onRenameDay: (id: string) => void;
+  onDeleteDay: (id: string) => void;
+  onOpenList: () => void;
 }) {
-  const [w, setW] = useState(props.initial.weight);
-  const [r, setR] = useState(props.initial.reps);
+  const setsToday = new Map(props.session.map((e) => [e.exerciseId, e.sets.length]));
+
   return (
-    <div className="mt-3 rounded-2xl border border-border p-3">
-      <div className="flex gap-3">
-        <CompactStepper
-          label={`weight · ${UNIT}`}
-          value={w}
-          step={props.exercise.step || 2.5}
-          onChange={setW}
-        />
-        <CompactStepper label="reps" value={r} step={1} onChange={setR} />
+    <div>
+      <div className="mb-1 flex items-start justify-between gap-3">
+        <h1 className="font-serif text-[34px] leading-none">Today’s session</h1>
+        <button
+          onClick={props.onOpenList}
+          className="mt-1.5 shrink-0 font-serif text-[15px] text-text-dim italic active:text-accent"
+        >
+          your lifts
+        </button>
       </div>
-      <button
-        onClick={() => {
-          if (r > 0) props.onLog(w, r);
-        }}
-        className="mt-3 w-full rounded-full border border-white/15 py-2.5 font-serif text-[18px] text-text italic active:border-accent active:text-accent"
-      >
-        log set
+      <p className="mb-6 text-[14px] text-text-dim italic">
+        Your split. Build it however you train.
+      </p>
+
+      <div className="grid grid-cols-2 gap-3">
+        {props.days.map((day, i) => {
+          const target = day.exerciseIds.length * TARGET_SET_COUNT;
+          const logged = day.exerciseIds.reduce(
+            (a, id) => a + (setsToday.get(id) ?? 0),
+            0,
+          );
+          const pct = target > 0 ? Math.min(100, Math.round((logged / target) * 100)) : 0;
+          return (
+            <DayCard
+              key={day.id}
+              index={i}
+              day={day}
+              logged={logged}
+              target={target}
+              pct={pct}
+              onOpen={() => props.onOpenDay(day.id)}
+              onRename={() => props.onRenameDay(day.id)}
+              onDelete={() => props.onDeleteDay(day.id)}
+            />
+          );
+        })}
+        <button
+          onClick={props.onAddDay}
+          className="flex min-h-[148px] flex-col items-center justify-center gap-1.5 rounded-[18px] border border-dashed border-white/20 text-accent transition-colors active:border-accent/60"
+        >
+          <Plus size={20} />
+          <span className="font-serif text-[16px] italic">Add a day</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DayCard(props: {
+  index: number;
+  day: SplitDay;
+  logged: number;
+  target: number;
+  pct: number;
+  onOpen: () => void;
+  onRename: () => void;
+  onDelete: () => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const hasExercises = props.day.exerciseIds.length > 0;
+
+  return (
+    <div className="glass-card relative min-h-[148px] rounded-[18px] p-4">
+      <div className="mb-2 flex items-start justify-between">
+        <span className="font-mono text-[11px] text-text-dim/50">
+          ·{String(props.index + 1).padStart(2, "0")}
+        </span>
+        <button
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-label="day options"
+          className="px-1 text-text-dim/50 active:text-text-dim"
+        >
+          ···
+        </button>
+      </div>
+
+      {menuOpen && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+          <div className="absolute top-9 right-3 z-20 overflow-hidden rounded-xl border border-border bg-surface shadow-lg">
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                props.onRename();
+              }}
+              className="block w-full px-4 py-2.5 text-left text-sm whitespace-nowrap text-text active:bg-white/5"
+            >
+              rename
+            </button>
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                props.onDelete();
+              }}
+              className="block w-full px-4 py-2.5 text-left text-sm whitespace-nowrap text-[#ff6b5b] active:bg-white/5"
+            >
+              delete
+            </button>
+          </div>
+        </>
+      )}
+
+      <button onClick={props.onOpen} className="block w-full text-left">
+        <h3 className="mb-3 truncate font-serif text-[22px] font-semibold">
+          {props.day.name}
+        </h3>
+
+        {hasExercises ? (
+          <>
+            <div className="mb-1 text-[15px] font-semibold">
+              {props.logged} of {props.target} logged
+            </div>
+            <div className="mb-2 text-[10px] tracking-[0.1em] text-text-dim/60 uppercase">
+              {props.day.exerciseIds.length}{" "}
+              {props.day.exerciseIds.length === 1 ? "exercise" : "exercises"}
+            </div>
+            <div className="h-1 w-full overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-accent transition-all"
+                style={{ width: `${props.pct}%` }}
+              />
+            </div>
+          </>
+        ) : (
+          <div className="text-[13px] text-text-dim italic">empty · tap to add lifts</div>
+        )}
       </button>
     </div>
   );
 }
 
-function LibrarySheet(props: {
-  exercises: Exercise[];
-  inSessionNames: Set<string>;
-  heading: string;
-  subtitle: string;
-  closeLabel: string;
-  markAdded: boolean;
-  onPick: (name: string) => void;
+const DAY_PRESETS = ["Push", "Pull", "Legs", "Upper", "Lower", "Full Body", "Arms", "Rest"];
+
+function AddDaySheet(props: {
+  editingDay: SplitDay | null;
   onClose: () => void;
+  onCreate: (name: string) => void;
+}) {
+  const [name, setName] = useState(props.editingDay?.name ?? "");
+  const isEdit = Boolean(props.editingDay);
+  const submit = () => {
+    if (name.trim()) props.onCreate(name.trim());
+  };
+
+  return (
+    <Sheet onClose={props.onClose}>
+      <div className="mb-1 text-[11px] font-semibold tracking-[0.18em] text-accent uppercase">
+        {isEdit ? "rename day" : "new day"}
+      </div>
+      <h3 className="mb-2 font-serif text-[28px]">
+        {isEdit ? "Rename your day" : "Name your day"}
+      </h3>
+      <p className="mb-4 text-sm text-text-dim">
+        Tap a name or type your own. You can rename it any time.
+      </p>
+      <div className="mb-4 flex flex-wrap gap-2">
+        {DAY_PRESETS.map((p) => (
+          <button
+            key={p}
+            onClick={() => setName(p)}
+            className={`rounded-full border px-4 py-2 text-[13px] font-medium tracking-wide uppercase transition-colors ${
+              name === p
+                ? "border-accent text-accent"
+                : "border-border text-text-dim active:border-white/35"
+            }`}
+          >
+            {p}
+          </button>
+        ))}
+      </div>
+      <input
+        autoFocus
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && submit()}
+        placeholder="Or type a name"
+        className="mb-5 w-full rounded-full border border-white/15 bg-transparent px-4 py-3 text-[16px] outline-none placeholder:text-text-dim/50"
+      />
+      <button
+        onClick={submit}
+        disabled={!name.trim()}
+        className="w-full rounded-full bg-accent px-7 py-3.5 text-center font-serif text-[20px] text-black italic disabled:opacity-40"
+      >
+        {isEdit ? "save" : "create the day"}
+      </button>
+    </Sheet>
+  );
+}
+
+// ================= PART 4 — the exercise library =================
+
+function LibraryScreen(props: {
+  exercises: Exercise[];
+  dayName: string;
+  dayExerciseIds: Set<string>;
+  onToggle: (name: string, included: boolean) => void;
+  onInfo: (name: string) => void;
+  onBack: () => void;
 }) {
   const [q, setQ] = useState("");
   const query = q.trim().toLowerCase();
@@ -1841,22 +2360,36 @@ function LibrarySheet(props: {
         }))
         .filter((g) => g.items.length > 0)
     : groups;
-  const exact = groups.some((g) =>
-    g.items.some((i) => i.toLowerCase() === query),
-  );
+  const exact = groups.some((g) => g.items.some((i) => i.toLowerCase() === query));
+
+  const isIncluded = (name: string) =>
+    props.exercises.some(
+      (e) =>
+        e.name.toLowerCase() === name.toLowerCase() && props.dayExerciseIds.has(e.id),
+    );
 
   return (
-    <Sheet onClose={props.onClose}>
-      <h3 className="font-serif text-[30px]">{props.heading}</h3>
-      <div className="mb-3 text-sm text-text-dim">{props.subtitle}</div>
+    <div className="pb-6">
+      <div className="mb-4 flex items-center justify-between">
+        <button
+          onClick={props.onBack}
+          className="flex items-center gap-1 font-serif text-[16px] text-text-dim italic"
+        >
+          <ChevronLeft size={14} /> session
+        </button>
+        <span className="text-xs text-text-dim">
+          {props.dayExerciseIds.size} in your session
+        </span>
+      </div>
+      <h2 className="mb-4 font-serif text-[36px] leading-none">Library</h2>
 
-      <div className="mb-3 flex items-center gap-2 rounded-full border border-white/15 px-4 py-2.5">
+      <div className="mb-5 flex items-center gap-2 rounded-full border border-border px-4 py-3">
         <Search size={16} className="shrink-0 text-text-dim" />
         <input
           autoFocus
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search exercises…"
+          placeholder="Search any exercise…"
           className="w-full bg-transparent text-[16px] outline-none placeholder:text-text-dim/50"
         />
         {q && (
@@ -1870,52 +2403,129 @@ function LibrarySheet(props: {
         )}
       </div>
 
-      <div className="max-h-[46vh] overflow-y-auto pr-1">
-        {shown.map((g) => (
-          <div key={g.group} className="mb-4">
-            <div className="mb-2 text-[11px] font-semibold tracking-[0.16em] text-text-dim/60 uppercase">
+      {shown.map((g) => (
+        <div key={g.group} className="mb-5">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-[11px] font-semibold tracking-[0.16em] text-text-dim/60 uppercase">
               {g.group}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {g.items.map((name) => {
-                const added =
-                  props.markAdded && props.inSessionNames.has(name.toLowerCase());
-                return (
+            </span>
+            <span className="rounded-full border border-border px-2.5 py-0.5 text-[11px] text-text-dim">
+              {g.items.length}
+            </span>
+          </div>
+          <div className="glass-card rounded-[18px]">
+            {g.items.map((name, i) => {
+              const included = isIncluded(name);
+              return (
+                <div
+                  key={name}
+                  className={`flex items-center gap-3 px-4 py-3.5 ${
+                    i > 0 ? "border-t border-border" : ""
+                  }`}
+                >
                   <button
-                    key={name}
-                    disabled={added}
-                    onClick={() => props.onPick(name)}
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 font-serif text-[17px] italic ${
-                      added
-                        ? "border-[#34d399]/50 text-[#34d399]"
-                        : "border-border text-text active:border-white/35"
+                    onClick={() => props.onToggle(name, !included)}
+                    aria-label={included ? `remove ${name}` : `add ${name}`}
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border transition-colors ${
+                      included
+                        ? "border-accent bg-accent text-black"
+                        : "border-white/25 text-transparent"
                     }`}
                   >
-                    {name}
-                    {added && <Check size={14} />}
+                    <Check size={13} strokeWidth={3} />
                   </button>
-                );
-              })}
-            </div>
+                  <button
+                    onClick={() => props.onToggle(name, !included)}
+                    className="min-w-0 flex-1 truncate text-left text-[16px] font-medium"
+                  >
+                    {name}
+                  </button>
+                  <button
+                    onClick={() => props.onInfo(name)}
+                    aria-label={`${name} form info`}
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-text-dim transition-colors active:border-accent active:text-accent"
+                  >
+                    <Info size={14} />
+                  </button>
+                </div>
+              );
+            })}
           </div>
-        ))}
+        </div>
+      ))}
 
-        {query && !exact && (
-          <button
-            onClick={() => props.onPick(q.trim())}
-            className="mt-1 mb-2 w-full rounded-full border border-white/15 px-4 py-3 text-left font-serif text-[18px] italic"
-          >
-            add “{q.trim()}” as a new lift
-          </button>
-        )}
+      {query && !exact && (
+        <button
+          onClick={() => props.onToggle(q.trim(), true)}
+          className="mt-1 w-full rounded-full border border-white/15 px-4 py-3 text-left font-serif text-[18px] italic"
+        >
+          add “{q.trim()}” as a new lift
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ExerciseInfoSheet(props: { name: string; onClose: () => void }) {
+  const info = getExerciseInfo(props.name);
+  return (
+    <Sheet onClose={props.onClose}>
+      <div className="mb-1 flex items-start justify-between">
+        <div className="text-[11px] font-semibold tracking-[0.18em] text-accent uppercase">
+          form
+        </div>
+        <button
+          onClick={props.onClose}
+          aria-label="close"
+          className="text-text-dim/60 active:text-text"
+        >
+          <X size={20} />
+        </button>
+      </div>
+      <h3 className="mb-2 font-serif text-[32px] italic">{props.name}</h3>
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-[12px] text-text-dim">
+        <span className="tracking-wide uppercase">{info.muscles.join(" · ")}</span>
+        <span className="rounded-full border border-accent/40 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-accent uppercase">
+          Tier {info.tier}
+        </span>
+        <span className="tracking-wide uppercase">{info.equipment}</span>
+      </div>
+      <p className="mb-4 font-serif text-[19px] italic">{info.tagline}</p>
+
+      <div className="mb-5 flex gap-2.5">
+        <div className="flex h-24 flex-1 items-center justify-center rounded-2xl border border-border bg-field">
+          <Dumbbell size={26} className="text-text-dim/40" />
+        </div>
+        <div className="flex h-24 flex-1 items-center justify-center rounded-2xl border border-accent/30 bg-field">
+          <Dumbbell size={26} className="text-accent/70" />
+        </div>
       </div>
 
-      <button
-        onClick={props.onClose}
-        className="mt-4 w-full rounded-full bg-accent px-7 py-3.5 font-serif text-[20px] text-black italic"
-      >
-        {props.closeLabel}
-      </button>
+      <div className="mb-4 flex flex-col gap-3">
+        {info.cues.map((cue, i) => (
+          <div key={cue} className="flex items-start gap-3">
+            <span className="mt-0.5 font-serif text-[15px] text-accent italic">
+              {toRoman(i + 1)}
+            </span>
+            <span className="text-[15px]">{cue}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        {info.tags.map((tag) => (
+          <span
+            key={tag}
+            className="rounded-full border border-border px-3.5 py-1.5 text-[13px] text-text-dim"
+          >
+            {tag}
+          </span>
+        ))}
+      </div>
+
+      <div className="glass-card rounded-2xl p-4 text-[14px] leading-relaxed text-text-dim">
+        {info.coaching}
+      </div>
     </Sheet>
   );
 }
@@ -1958,7 +2568,7 @@ function CelebrateScreen(props: { data: Celebration; onDone: () => void }) {
       <div className="mt-7 mb-2 text-[11px] font-semibold tracking-[0.16em] text-text-dim/60 uppercase">
         What you lifted
       </div>
-      <div className="rounded-[18px] border border-border">
+      <div className="glass-card rounded-[18px]">
         {items.map((it, i) => (
           <div
             key={i}
@@ -1986,7 +2596,7 @@ function CelebrateScreen(props: { data: Celebration; onDone: () => void }) {
             {beaten.map((it, i) => (
               <div
                 key={i}
-                className="flex items-center gap-3 rounded-2xl border border-border px-5 py-3"
+                className="glass-card flex items-center gap-3 rounded-2xl px-5 py-3"
               >
                 <GradeBadge grade={it.grade} />
                 <span className="min-w-0 flex-1 truncate font-serif text-[20px] italic">

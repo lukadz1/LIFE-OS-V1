@@ -167,6 +167,13 @@ export interface TrainingDay {
   name: string;
 }
 
+export interface SplitDay {
+  id: string;
+  name: string;
+  exerciseIds: string[];
+  createdAt: string;
+}
+
 export interface Exercise {
   id: string;
   name: string;
@@ -178,6 +185,7 @@ export interface Exercise {
   startWeight: number;
   bodyweight: boolean;
   restSeconds: number;
+  starred?: boolean;
 }
 
 export interface SetLog {

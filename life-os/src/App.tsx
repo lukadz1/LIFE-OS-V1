@@ -108,7 +108,7 @@ function Header({ theme, onToggleTheme, onOpenSettings, minimal }: HeaderProps) 
 }
 
 function App() {
-  const { areas, loading: areasLoading } = useLifeAreas();
+  const { areas } = useLifeAreas();
   const [view, setView] = useState<ViewId>("home");
   const [slideDir, setSlideDir] = useState<"left" | "right">("right");
   const [theme, setTheme] = useState<Theme>(() =>

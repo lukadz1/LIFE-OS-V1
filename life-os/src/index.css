@@ -334,6 +334,16 @@ body::before {
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
   }
 
+  /* Frosted card for content sitting over the animated dot-grid background —
+     same recipe as .bento-tile, reused wherever a bordered card would
+     otherwise read as fully transparent. */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    backdrop-filter: blur(20px) saturate(1.2);
+    -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  }
+
   .gradient-title {
     background: linear-gradient(180deg, #ffffff 0%, #c7c4bc 120%);
     background-clip: text;
@@ -346,6 +356,14 @@ body::before {
 :root[data-theme="light"] .panel-card {
   border: 1px solid rgba(0, 0, 0, 0.06);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+:root[data-theme="light"] .glass-card {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
 :root[data-theme="light"] .gradient-title {
@@ -469,4 +487,20 @@ body::before {
 :root[data-theme="light"] .bento-tile-icon {
   filter: none;
   opacity: 0.75;
+}
+
+/* Row-hover action buttons (delete/remove icons) default to opacity-0 and
+   only reveal via group-hover — Tailwind gates that variant behind
+   @media (hover: hover) itself, so on an iPhone (no real :hover state) the
+   reveal rule never fires and these controls stay permanently invisible and
+   un-tappable. Force them visible wherever the primary input can't hover.
+   The pointer-events-none exclusion protects the one legitimate hover-only
+   element that isn't a button (the streak tooltip in StreakChip). Uses real
+   escaped class selectors rather than [class~=] attribute selectors — the
+   latter matched via .matches() in testing but did not actually win the
+   cascade in this app's Chromium build. */
+@media (hover: none) {
+  .opacity-0.group-hover\:opacity-100:not(.pointer-events-none) {
+    opacity: 1 !important;
+  }
 }

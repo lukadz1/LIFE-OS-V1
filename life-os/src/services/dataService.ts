@@ -45,6 +45,7 @@ import type {
   ScoreMetric,
   SetLog,
   SpendCategory,
+  SplitDay,
   Task,
   Transaction,
   WeightEntry,
@@ -354,6 +355,17 @@ export async function getSetLogs(): Promise<SetLog[]> {
 export async function saveSetLogs(logs: SetLog[]): Promise<SetLog[]> {
   writeStorage(SET_LOGS_KEY, logs);
   return delay(logs);
+}
+
+const SPLIT_DAYS_KEY = "split-days";
+
+export async function getSplitDays(): Promise<SplitDay[]> {
+  return delay(readStorage<SplitDay[]>(SPLIT_DAYS_KEY, []));
+}
+
+export async function saveSplitDays(days: SplitDay[]): Promise<SplitDay[]> {
+  writeStorage(SPLIT_DAYS_KEY, days);
+  return delay(days);
 }
 
 // ---- Bodyweight ----
