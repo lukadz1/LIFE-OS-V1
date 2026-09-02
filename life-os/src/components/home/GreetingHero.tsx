@@ -17,28 +17,34 @@ function shortGreeting(): string {
   return "Evening";
 }
 
-// ===== Coach =====
-// A soft white blob with a black eye that idles with an organic wobble,
-// leans subtly toward the cursor, and looks around on its own — alive
-// without being a literal recreation of any one reference character.
-// Reaction distances are in viewport pixels (independent of the blob's own
-// rendered size); lean/stretch use plain translate + uniform scale only —
-// deliberately not a rotate/scale(x,y)/rotate(-angle) stretch trick, which
-// causes a visible spin at the angle wrap (atan2 discontinuity at ±180°).
+// ===== Coach ("bolb") =====
+// A soft, glowing orange blob with a wide rounded head that tapers to a
+// short rounded chin, and two slanted white crescent eyes. Paint order is
+// glow -> chin -> head -> eyes; the chin+head group shares one blur so they
+// fuse into a single soft silhouette instead of reading as two shapes.
+// Design box is a fixed 340x400 — per the source spec, everything is scaled
+// uniformly via `transform: scale()` rather than restyled per instance, so
+// the tuned offsets/radii stay exact at any rendered size.
+//
+// Idle motion carries over from the original blob: the head breathes via an
+// asymmetric border-radius wobble and the eyes blink together on their own
+// cadence, no floating. Cursor lean/hover grow is layered underneath.
 
+const DESIGN_W = 340;
+const DESIGN_H = 400;
 const REACT_RADIUS_PX = 260; // blob leans/grows within this cursor distance
-const EYE_RADIUS_PX = 180; // eye tracks the cursor within this distance
-const WANDER_INTERVAL_MS = 2200;
-const EYE_SIZE_RATIO = 22 / 88; // spec's eye is 22px on an 88px blob
+const LEAN_PX = 4;
+const STRETCH = 0.12;
+const HOVER_BOOST = 0.05;
 
 function CoachAvatar({ size = 72 }: { size?: number }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const blobRef = useRef<HTMLDivElement>(null);
-  const eyeRef = useRef<HTMLDivElement>(null);
+  const leanRef = useRef<HTMLDivElement>(null);
   const centerRef = useRef({ x: 0, y: 0 });
   const mouseRef = useRef<{ x: number; y: number } | null>(null);
   const hoverRef = useRef(false);
-  const wanderRef = useRef({ x: 0, y: 0 });
+
+  const scale = size / DESIGN_H;
 
   const updateCenter = useCallback(() => {
     const el = containerRef.current;
@@ -47,11 +53,11 @@ function CoachAvatar({ size = 72 }: { size?: number }) {
     centerRef.current = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
   }, []);
 
-  // Mutate the DOM directly rather than via React state so mousemove/wander
-  // ticks don't trigger a re-render per frame.
-  const applyBlob = useCallback(() => {
-    const blob = blobRef.current;
-    if (!blob) return;
+  // Mutate the DOM directly rather than via React state so mousemove ticks
+  // don't trigger a re-render per frame.
+  const applyLean = useCallback(() => {
+    const lean = leanRef.current;
+    if (!lean) return;
     let stretch = 0;
     let leanX = 0;
     let leanY = 0;
@@ -62,117 +68,156 @@ function CoachAvatar({ size = 72 }: { size?: number }) {
       const dist = Math.hypot(dx, dy);
       if (dist < REACT_RADIUS_PX && dist > 0) {
         const t = 1 - dist / REACT_RADIUS_PX;
-        stretch = t * 0.12;
-        const lean = t * 4;
-        leanX = (dx / dist) * lean;
-        leanY = (dy / dist) * lean;
+        stretch = t * STRETCH;
+        const magnitude = t * LEAN_PX;
+        leanX = (dx / dist) * magnitude;
+        leanY = (dy / dist) * magnitude;
       }
     }
-    const hoverBoost = hoverRef.current ? 0.05 : 0;
-    blob.style.transform = `translate(${leanX}px, ${leanY}px) scale(${1 + stretch + hoverBoost})`;
-  }, []);
-
-  const applyEye = useCallback(() => {
-    const eye = eyeRef.current;
-    if (!eye) return;
-    let px = 0;
-    let py = 0;
-    const m = mouseRef.current;
-    if (m) {
-      const dx = m.x - centerRef.current.x;
-      const dy = m.y - centerRef.current.y;
-      const dist = Math.hypot(dx, dy) || 1;
-      if (dist < EYE_RADIUS_PX) {
-        const mag = (1 - dist / EYE_RADIUS_PX) * 5;
-        px = (dx / dist) * mag;
-        py = (dy / dist) * mag;
-      }
-    }
-    px += wanderRef.current.x;
-    py += wanderRef.current.y;
-    eye.style.transform = `translate(${px}px, ${py}px)`;
-  }, []);
+    const hoverBoost = hoverRef.current ? HOVER_BOOST : 0;
+    lean.style.transform = `translate(${leanX}px, ${leanY}px) scale(${scale * (1 + stretch + hoverBoost)})`;
+  }, [scale]);
 
   useEffect(() => {
     updateCenter();
+    applyLean();
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     function handleMove(e: PointerEvent) {
       updateCenter();
       mouseRef.current = { x: e.clientX, y: e.clientY };
-      applyBlob();
-      applyEye();
+      applyLean();
     }
     function handleResize() {
       updateCenter();
-      applyBlob();
-      applyEye();
+      applyLean();
     }
 
     window.addEventListener("pointermove", handleMove);
     window.addEventListener("resize", handleResize);
-    const wanderTimer = window.setInterval(() => {
-      const angle = Math.random() * Math.PI * 2;
-      const mag = 2 + Math.random() * 3.5;
-      wanderRef.current = { x: Math.cos(angle) * mag, y: Math.sin(angle) * mag };
-      applyEye();
-    }, WANDER_INTERVAL_MS);
 
     return () => {
       window.removeEventListener("pointermove", handleMove);
       window.removeEventListener("resize", handleResize);
-      window.clearInterval(wanderTimer);
     };
-  }, [updateCenter, applyBlob, applyEye]);
+  }, [updateCenter, applyLean]);
 
   const handleEnter = () => {
     hoverRef.current = true;
-    applyBlob();
+    applyLean();
   };
   const handleLeave = () => {
     hoverRef.current = false;
-    applyBlob();
+    applyLean();
   };
-
-  const eyeSize = Math.round(size * EYE_SIZE_RATIO);
 
   return (
     <div
       ref={containerRef}
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
-      className="relative flex shrink-0 cursor-pointer items-center justify-center"
-      style={{ width: size, height: size }}
+      className="relative shrink-0 cursor-pointer"
+      style={{ width: DESIGN_W * scale, height: DESIGN_H * scale }}
     >
       <div
-        ref={blobRef}
+        ref={leanRef}
         aria-hidden
-        className="animate-coach-idle motion-reduce:animate-none absolute inset-0"
+        className="absolute top-0 left-0"
         style={{
-          background:
-            "radial-gradient(circle at 32% 28%, var(--color-coach-blob-1) 0%, var(--color-coach-blob-2) 55%, var(--color-coach-blob-3) 100%)",
-          boxShadow: "var(--coach-glow)",
-          transition:
-            "transform 1.1s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.8s ease-out",
-        }}
-      />
-      <div
-        ref={eyeRef}
-        aria-hidden
-        className="relative"
-        style={{
-          width: eyeSize,
-          height: eyeSize,
-          transition: "transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)",
+          width: DESIGN_W,
+          height: DESIGN_H,
+          transformOrigin: "top left",
+          transform: `scale(${scale})`,
+          transition: "transform 1.1s cubic-bezier(0.34, 1.56, 0.64, 1)",
         }}
       >
+        {/* Glow */}
         <div
-          className="animate-coach-blink motion-reduce:animate-none h-full w-full rounded-full"
+          aria-hidden
+          className="absolute rounded-full"
           style={{
-            background: "var(--color-coach-eye)",
-            boxShadow: "0 1px 2px rgba(0, 0, 0, 0.5)",
+            left: 20,
+            top: 50,
+            width: 300,
+            height: 300,
+            opacity: 0.7,
+            background:
+              "radial-gradient(circle, rgba(255,140,60,.75) 0%, rgba(255,90,40,0) 68%)",
+            filter: "blur(30px)",
           }}
         />
+
+        {/* Body group: chin drawn first, head on top hides its upper corners.
+            Blurring the group (not each shape) fuses them into one silhouette.
+            The head itself carries the old blob's organic border-radius
+            wobble so it still breathes without floating. */}
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{ filter: "blur(6px)" }}
+        >
+          <div
+            aria-hidden
+            className="absolute"
+            style={{
+              left: 113,
+              top: 186,
+              width: 114,
+              height: 114,
+              transform: "rotate(45deg)",
+              borderRadius: "50% 50% 30% 50%",
+              background:
+                "radial-gradient(85% 85% at 18% 18%, #ff9a52 0%, #f4712b 58%, #e05c1f 100%)",
+            }}
+          />
+          <div
+            aria-hidden
+            className="animate-bolb-idle motion-reduce:animate-none absolute"
+            style={{
+              left: 26,
+              top: 48,
+              width: 288,
+              height: 311,
+              background:
+                "radial-gradient(62% 58% at 42% 28%, #fff0dc 0%, #ffbe86 32%, #ff8c42 64%, #f4712b 100%)",
+            }}
+          />
+        </div>
+
+        {/* Eyes: slanted crescent slits, angled down toward the center, blinking
+            together on the old blob's cadence. */}
+        <div
+          aria-hidden
+          className="animate-bolb-blink motion-reduce:animate-none absolute flex justify-between"
+          style={{
+            left: 74,
+            top: 140,
+            width: 192,
+            height: 60,
+            filter: "blur(1.2px)",
+          }}
+        >
+          <div
+            aria-hidden
+            style={{
+              width: 78,
+              height: 30,
+              background: "#fdfaf7",
+              borderRadius: "80% 24% 40% 60% / 92% 88% 14% 10%",
+              transform: "rotate(17deg)",
+            }}
+          />
+          <div
+            aria-hidden
+            style={{
+              width: 78,
+              height: 30,
+              background: "#fdfaf7",
+              borderRadius: "24% 80% 60% 40% / 88% 92% 10% 14%",
+              transform: "rotate(-17deg)",
+            }}
+          />
+        </div>
       </div>
     </div>
   );

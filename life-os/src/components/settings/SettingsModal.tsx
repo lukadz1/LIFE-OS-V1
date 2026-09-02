@@ -206,7 +206,7 @@ export function SettingsModal({
         className="max-h-[88vh] w-full max-w-[440px] overflow-y-auto rounded-[18px] border border-border bg-surface p-6 shadow-2xl"
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-serif text-[19px] text-text italic">
+          <h2 className="font-sans text-[19px] text-text">
             Your data
           </h2>
           <button

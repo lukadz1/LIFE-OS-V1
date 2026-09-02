@@ -11,7 +11,7 @@ export function CoachCard({ weakest }: CoachCardProps) {
         </p>
         {weakest ? (
           <>
-            <p className="mt-3 font-serif text-[24px] leading-snug italic sm:text-[27px]">
+            <p className="mt-3 font-sans text-[24px] leading-snug sm:text-[27px]">
               Focus on <span style={{ color: weakest.color }}>{weakest.name}</span>
             </p>
             <p className="mt-2 text-[13.5px] leading-snug text-text-dim">
@@ -19,7 +19,7 @@ export function CoachCard({ weakest }: CoachCardProps) {
             </p>
           </>
         ) : (
-          <p className="mt-3 text-[13.5px] leading-snug text-text-dim italic">
+          <p className="mt-3 text-[13.5px] leading-snug text-text-dim">
             Log an exam to get a coaching tip on your weakest subject.
           </p>
         )}
@@ -27,7 +27,7 @@ export function CoachCard({ weakest }: CoachCardProps) {
       {weakest && (
         <div className="mt-5 flex items-baseline gap-2 border-t border-border pt-4">
           <span
-            className="font-serif text-[32px] italic sm:text-[36px]"
+            className="font-sans text-[32px] sm:text-[36px]"
             style={{ color: weakest.color }}
           >
             {weakest.grade.toFixed(1)}

@@ -22,21 +22,6 @@ interface StandingCardProps {
   points: StandingPoint[];
 }
 
-function ChartDot(props: { cx?: number; cy?: number; payload?: StandingPoint }) {
-  const { cx, cy, payload } = props;
-  if (cx == null || cy == null || !payload) return null;
-  return (
-    <circle
-      cx={cx}
-      cy={cy}
-      r={5}
-      fill={gradeColor(payload.grade)}
-      stroke="var(--color-surface)"
-      strokeWidth={2}
-    />
-  );
-}
-
 export function StandingCard({ semesterLabel, average, points }: StandingCardProps) {
   const avgColor = average != null ? gradeColor(average) : "var(--color-text-dim)";
 
@@ -47,7 +32,7 @@ export function StandingCard({ semesterLabel, average, points }: StandingCardPro
       </p>
       <div className="mt-2 mb-1 flex items-baseline gap-2.5">
         <span
-          className="font-serif text-[46px] leading-none italic sm:text-[54px]"
+          className="font-sans text-[46px] leading-none sm:text-[54px]"
           style={{ color: avgColor, textShadow: average != null ? `0 0 32px ${avgColor}33` : "none" }}
         >
           {average != null ? average.toFixed(1) : "—"}
@@ -55,10 +40,10 @@ export function StandingCard({ semesterLabel, average, points }: StandingCardPro
         <span className="text-[13px] text-text-dim">average grade</span>
       </div>
 
-      <div className="mt-3 h-[190px]">
+      <div className="chart-dots-bg mt-3 h-[190px] rounded-[14px]">
         {points.length > 1 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+            <LineChart data={points} margin={{ top: 8, right: 8, bottom: 40, left: 8 }}>
               <ReferenceArea y1={4} y2={6} fill={GOOD_GRADE_COLOR} fillOpacity={0.07} />
               <ReferenceArea y1={1} y2={4} fill={BAD_GRADE_COLOR} fillOpacity={0.06} />
               <ReferenceLine
@@ -67,15 +52,19 @@ export function StandingCard({ semesterLabel, average, points }: StandingCardPro
                 strokeOpacity={0.5}
                 strokeDasharray="4 5"
               />
-              <XAxis dataKey="date" hide />
-              <YAxis
-                domain={[1, 6]}
-                ticks={[1, 4, 6]}
-                width={22}
+              <XAxis
+                dataKey="date"
                 tickLine={false}
                 axisLine={false}
                 tick={{ fill: "var(--color-text-dim)", fontSize: 11 }}
+                tickFormatter={(label) =>
+                  new Date(String(label)).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                  })
+                }
               />
+              <YAxis domain={[1, 6]} hide />
               <Tooltip
                 contentStyle={{
                   background: "var(--color-surface-raised)",
@@ -100,17 +89,22 @@ export function StandingCard({ semesterLabel, average, points }: StandingCardPro
               <Line
                 type="monotone"
                 dataKey="grade"
-                stroke="var(--color-text-dim)"
+                stroke="color-mix(in srgb, var(--color-accent) 65%, black)"
                 strokeWidth={2}
-                dot={<ChartDot />}
-                activeDot={{ r: 6 }}
+                dot={false}
+                activeDot={{
+                  r: 5,
+                  fill: "var(--color-accent)",
+                  stroke: "var(--color-accent)",
+                  filter: "drop-shadow(0 0 6px var(--color-accent))",
+                }}
                 isAnimationActive={false}
               />
             </LineChart>
           </ResponsiveContainer>
         ) : (
           <div className="flex h-full items-center justify-center">
-            <p className="max-w-[220px] text-center text-[13px] text-text-dim italic">
+            <p className="max-w-[220px] text-center text-[13px] text-text-dim">
               Log a couple of exams to see your standing chart here.
             </p>
           </div>

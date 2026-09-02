@@ -1,175 +1,150 @@
+import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
-import { BudgetPanel } from "../components/finance/budget/BudgetPanel";
-import { AllocationDonut } from "../components/finance/AllocationDonut";
-import { AssetCategoryCard } from "../components/finance/AssetCategoryCard";
-import { BillsPanel } from "../components/finance/bills/BillsPanel";
-import { CurrencySwitch } from "../components/finance/CurrencySwitch";
-import { NetWorthChart } from "../components/finance/NetWorthChart";
-import { NetWorthHeader } from "../components/finance/NetWorthHeader";
+import { createPortal } from "react-dom";
+import { AddExpenseSheet } from "../components/finance/AddExpenseSheet";
+import { FixedCostsCard } from "../components/finance/FixedCostsCard";
+import { LeftToSpendCard } from "../components/finance/LeftToSpendCard";
+import { MonthCard } from "../components/finance/MonthCard";
+import { MoneyCard } from "../components/finance/MoneyCard";
 import { readStorage, writeStorage } from "../data/storage";
+import { useBillsDebts } from "../hooks/useBillsDebts";
 import { useFinance } from "../hooks/useFinance";
-import type { AssetCategory, Currency } from "../types";
+import { useSpending } from "../hooks/useSpending";
+import type { Currency } from "../types";
+import { todayISO } from "../utils/date";
+import { currentMonthKey, monthKey } from "../utils/spendingEngine";
 
-const TABS = [
-  { id: "networth", label: "Net worth" },
-  { id: "budget", label: "Budget" },
-  { id: "bills", label: "Bills & Debt" },
-] as const;
-type FinanceTab = (typeof TABS)[number]["id"];
-
+/** Finance, radically simplified: one scrollable page. What's left this
+ * month, where it went, the fixed costs, and what's owned — plus a floating
+ * "+" that logs an expense in two taps. */
 export function FinanceView() {
-  const {
-    loading,
-    accounts,
-    totalsByCategory,
-    netWorthChf,
-    history,
-    stats,
-    refreshingCategory,
-    addAccount,
-    deleteAccount,
-    refreshPrices,
-  } = useFinance();
+  const spending = useSpending();
+  const finance = useFinance();
+  const bills = useBillsDebts();
 
-  const [currency, setCurrency] = useState<Currency>(() =>
-    readStorage<Currency>("currency", "CHF"),
+  const currency = readStorage<Currency>("currency", "CHF");
+  const [budgetChf, setBudgetChf] = useState<number | null>(() =>
+    readStorage<number | null>("monthly-budget", null),
   );
-  const [tab, setTab] = useState<FinanceTab>("networth");
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
-    writeStorage("currency", currency);
-  }, [currency]);
+    writeStorage("monthly-budget", budgetChf);
+  }, [budgetChf]);
 
-  const byCategory = (category: AssetCategory) =>
-    accounts.filter((a) => a.category === category);
+  const loading = spending.loading || finance.loading || bills.loading;
+
+  const month = currentMonthKey();
+  const spentThisMonthChf = spending.transactions
+    .filter((t) => monthKey(t.date) === month)
+    .reduce((sum, t) => sum + t.amountChf, 0);
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-serif text-[32px] text-text italic">Finance</h1>
-          <div className="mt-2 flex rounded-[10px] bg-field p-[3px] font-mono text-[12px]">
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                className={`rounded-[8px] px-3.5 py-1.5 font-medium tracking-wide transition-colors ${
-                  tab === t.id
-                    ? "bg-accent text-accent-contrast"
-                    : "text-text-dim hover:text-text"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <CurrencySwitch value={currency} onChange={setCurrency} />
-      </div>
+      <h1 className="mb-5 font-sans text-[32px] text-text">Finance</h1>
 
-      {tab === "budget" ? (
-        <BudgetPanel currency={currency} />
-      ) : tab === "bills" ? (
-        <BillsPanel currency={currency} />
-      ) : loading ? (
+      {loading ? (
         <div className="py-16 text-center text-sm text-text-dim">
           Loading your finances…
         </div>
       ) : (
-        <>
-          <NetWorthHeader
-            netWorthChf={netWorthChf}
-            currency={currency}
-            hasAccounts={accounts.length > 0}
-          />
-
-          <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-12">
-            <NetWorthChart
-              className="lg:col-span-7"
-              history={history}
-              stats={stats}
+        <div className="flex flex-col gap-4 pb-24 lg:grid lg:grid-cols-2 lg:items-start">
+          <div className="flex flex-col gap-4">
+            <LeftToSpendCard
+              budgetChf={budgetChf}
+              spentChf={spentThisMonthChf}
               currency={currency}
+              onSetBudget={setBudgetChf}
             />
-            <AllocationDonut
-              className="lg:col-span-5"
-              totalsByCategory={totalsByCategory}
-              netWorthChf={netWorthChf}
+            <MonthCard
+              transactions={spending.transactions}
+              categories={spending.categories}
               currency={currency}
+              onDeleteTransaction={spending.deleteTransaction}
+              onChangeCategory={spending.updateTransactionCategory}
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <AssetCategoryCard
-              title="Bank accounts"
-              accounts={byCategory("bank")}
+          <div className="flex flex-col gap-4">
+            <FixedCostsCard
+              recurring={spending.recurring}
+              bills={bills.items}
+              categories={spending.categories}
               currency={currency}
-              totalChf={totalsByCategory.bank}
-              pricedMode={false}
-              symbolPlaceholder="Account name"
-              onAdd={(input) => addAccount("bank", input)}
-              onDelete={deleteAccount}
+              onAddRecurring={spending.addRecurring}
+              onDeleteRecurring={spending.deleteRecurring}
+              onToggleRecurring={spending.toggleRecurring}
+              onConfirmRecurring={spending.confirmRecurring}
+              onSkipRecurring={spending.skipRecurring}
+              onAddBill={bills.addItem}
+              onToggleBillPaid={bills.togglePaid}
+              onDeleteBill={bills.deleteItem}
             />
-            <AssetCategoryCard
-              title="Sparkonto"
-              accounts={byCategory("sparkonto")}
+            <MoneyCard
+              accounts={finance.accounts}
+              netWorthChf={finance.netWorthChf}
+              goals={spending.goals}
+              transactions={spending.transactions}
+              categories={spending.categories}
               currency={currency}
-              totalChf={totalsByCategory.sparkonto}
-              pricedMode={false}
-              symbolPlaceholder="Account name"
-              onAdd={(input) => addAccount("sparkonto", input)}
-              onDelete={deleteAccount}
-            />
-            <AssetCategoryCard
-              title="Stocks · investments"
-              accounts={byCategory("stocks")}
-              currency={currency}
-              totalChf={totalsByCategory.stocks}
-              pricedMode
-              symbolPlaceholder="Ticker (e.g. VTI)"
-              quantityPlaceholder="Shares"
-              unitNoun="shares"
-              knownSymbols={[
-                "VTI",
-                "VOO",
-                "AAPL",
-                "MSFT",
-                "GOOGL",
-                "AMZN",
-                "NVDA",
-                "TSLA",
-              ]}
-              refreshing={refreshingCategory === "stocks"}
-              onAdd={(input) => addAccount("stocks", input)}
-              onDelete={deleteAccount}
-              onRefreshPrices={() => refreshPrices("stocks")}
-            />
-            <AssetCategoryCard
-              title="Crypto · live"
-              accounts={byCategory("crypto")}
-              currency={currency}
-              totalChf={totalsByCategory.crypto}
-              pricedMode
-              symbolPlaceholder="Coin (e.g. BTC)"
-              quantityPlaceholder="Quantity"
-              unitNoun="coins"
-              knownSymbols={["BTC", "ETH", "SOL", "ADA", "DOGE"]}
-              refreshing={refreshingCategory === "crypto"}
-              onAdd={(input) => addAccount("crypto", input)}
-              onDelete={deleteAccount}
-              onRefreshPrices={() => refreshPrices("crypto")}
-            />
-            <AssetCategoryCard
-              title="Other assets"
-              accounts={byCategory("other")}
-              currency={currency}
-              totalChf={totalsByCategory.other}
-              pricedMode={false}
-              symbolPlaceholder="Asset name"
-              onAdd={(input) => addAccount("other", input)}
-              onDelete={deleteAccount}
+              onAddAccount={({ name, valueChf }) =>
+                finance.addAccount("bank", { name, manualValueChf: valueChf })
+              }
+              onSetAccountValue={(id, valueChf) => {
+                const account = finance.accounts.find((a) => a.id === id);
+                if (account) {
+                  finance.adjustAccountValue(id, valueChf - account.valueChf);
+                }
+              }}
+              onDeleteAccount={finance.deleteAccount}
+              onAddGoal={({ name, targetChf }) =>
+                spending.addGoal({
+                  name,
+                  targetChf,
+                  targetDate: null,
+                  linkedCategoryId: null,
+                })
+              }
+              onDepositGoal={spending.depositGoal}
+              onDeleteGoal={spending.deleteGoal}
             />
           </div>
-        </>
+        </div>
+      )}
+
+      {/* Portaled: the view's enter animation transforms this subtree, which
+          would re-anchor position:fixed to the view instead of the screen. */}
+      {createPortal(
+        <button
+          onClick={() => setSheetOpen(true)}
+          aria-label="Add expense"
+          className="fixed right-[max(1.1rem,env(safe-area-inset-right))] bottom-[max(1.1rem,env(safe-area-inset-bottom))] z-30 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white shadow-[0_10px_30px_rgba(251,86,7,0.45)] transition-transform hover:scale-105 active:scale-95"
+        >
+          <Plus size={26} strokeWidth={2.5} />
+        </button>,
+        document.body,
+      )}
+
+      {sheetOpen && (
+        <AddExpenseSheet
+          categories={spending.categories}
+          currency={currency}
+          onClose={() => setSheetOpen(false)}
+          onSave={(entry) => {
+            spending.addTransaction({ date: todayISO(), ...entry });
+            setSheetOpen(false);
+          }}
+          onAddCategory={({ name, emoji }) =>
+            spending.addCategory({
+              name,
+              emoji,
+              bucket: "variable",
+              monthlyBudgetChf: null,
+              keywords: [],
+            })
+          }
+          onDeleteCategory={spending.deleteCategory}
+        />
       )}
     </div>
   );

@@ -63,7 +63,7 @@ export function LauncherCard({
         }`}
       >
         <div className="min-w-0">
-          <h3 className="font-serif text-[26px] font-normal tracking-tight text-text italic">
+          <h3 className="font-sans text-[26px] font-normal tracking-tight text-text">
             {title}
           </h3>
           <p className="mt-0.5 truncate text-[13px] text-text-dim">

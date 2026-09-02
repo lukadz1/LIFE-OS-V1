@@ -7,6 +7,11 @@ interface PanelProps {
   children: ReactNode;
   className?: string;
   bodyClassName?: string;
+  /** Opts out of the ambient accent-tinted edge + corner glow. The glow reads
+   * fine on the short stat-card-sized panels it was designed for, but on a
+   * very tall panel (e.g. the full calendar) it stretches into a long,
+   * distracting stripe down the side — so tall panels can drop it. */
+  noGlow?: boolean;
 }
 
 export function Panel({
@@ -16,14 +21,15 @@ export function Panel({
   children,
   className = "",
   bodyClassName = "",
+  noGlow = false,
 }: PanelProps) {
   return (
     <section
-      className={`panel-card flex flex-col rounded-[22px] bg-surface ${className}`}
+      className={`${noGlow ? "" : "panel-card"} flex flex-col rounded-[22px] bg-surface ${className}`}
     >
       <header className="flex items-start justify-between gap-3 px-5 pt-4 pb-1">
         <div>
-          <h2 className="font-serif text-[21px] font-normal tracking-[-0.01em] text-text italic">
+          <h2 className="font-sans text-[21px] font-normal tracking-[-0.01em] text-text">
             {title}
           </h2>
           {subtitle && (

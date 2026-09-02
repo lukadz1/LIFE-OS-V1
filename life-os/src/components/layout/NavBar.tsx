@@ -2,14 +2,10 @@ import { useLayoutEffect, useRef, useState } from "react";
 
 export const VIEWS = [
   { id: "home", label: "Home" },
-  { id: "fitness", label: "Fitness" },
+  { id: "calendar", label: "Calendar" },
   { id: "school", label: "School" },
   { id: "finance", label: "Finance" },
-  { id: "calories", label: "KCAL Tracker" },
-  { id: "fuel", label: "Todays fuel" },
-  { id: "peak", label: "Peak Tracker" },
   { id: "todos", label: "ToDos" },
-  { id: "habits", label: "Habits" },
   { id: "goals", label: "Goals" },
 ] as const;
 

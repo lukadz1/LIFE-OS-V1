@@ -1,18 +1,27 @@
+import { Plus } from "lucide-react";
+import { useState } from "react";
+import { createPortal } from "react-dom";
+import { AddExpenseSheet } from "../components/finance/AddExpenseSheet";
+import { RecentActivityCard } from "../components/home/finance/RecentActivityCard";
+import { SpendingPlanCard } from "../components/home/finance/SpendingPlanCard";
+import { TopCategoriesCard } from "../components/home/finance/TopCategoriesCard";
+import { UpcomingBillsCard } from "../components/home/finance/UpcomingBillsCard";
 import { BottomTabBar } from "../components/home/BottomTabBar";
 import { GreetingHero } from "../components/home/GreetingHero";
 import { LauncherCard } from "../components/home/LauncherCard";
 import type { ViewId } from "../components/layout/NavBar";
-import { useCalories } from "../hooks/useCalories";
-import { useExercises } from "../hooks/useExercises";
+import { readStorage } from "../data/storage";
+import { useBillsDebts } from "../hooks/useBillsDebts";
+import { useEvents } from "../hooks/useEvents";
 import { useFinance } from "../hooks/useFinance";
-import { useFuel } from "../hooks/useFuel";
 import { useGoals } from "../hooks/useGoals";
-import { useHabits } from "../hooks/useHabits";
-import { usePeakTracker } from "../hooks/usePeakTracker";
 import { useSchool } from "../hooks/useSchool";
+import { useSpending } from "../hooks/useSpending";
 import { useTasks } from "../hooks/useTasks";
+import type { Currency } from "../types";
 import { formatMoney } from "../utils/currency";
-import { isToday } from "../utils/date";
+import { isToday, todayISO } from "../utils/date";
+import { currentMonthKey, monthKey } from "../utils/spendingEngine";
 
 interface HomeViewProps {
   onNavigate: (view: ViewId) => void;
@@ -20,33 +29,55 @@ interface HomeViewProps {
 
 const ACCENT = "var(--color-accent)";
 
-function todayKey(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate(),
-  ).padStart(2, "0")}`;
+interface StatTileProps {
+  label: string;
+  value: string;
+  tone?: "default" | "warn";
+}
+
+function StatTile({ label, value, tone = "default" }: StatTileProps) {
+  return (
+    <div className="panel-card ember-fade rounded-[22px] bg-surface p-5">
+      <p className="font-mono text-[11px] tracking-[0.14em] text-text-dim uppercase">
+        {label}
+      </p>
+      <p
+        className={`mt-1.5 font-sans text-[28px] leading-none ${
+          tone === "warn" ? "text-[#ff453a]" : "text-text"
+        }`}
+      >
+        {value}
+      </p>
+    </div>
+  );
 }
 
 export function HomeView({ onNavigate }: HomeViewProps) {
-  const exercisesData = useExercises();
-  const school = useSchool();
   const finance = useFinance();
-  const calories = useCalories();
-  const fuel = useFuel();
-  const peak = usePeakTracker();
+  const spending = useSpending();
+  const bills = useBillsDebts();
+  const school = useSchool();
   const tasks = useTasks();
-  const habits = useHabits();
   const goals = useGoals();
+  const events = useEvents();
 
-  // ---- live stat lines, one per area ----
+  const currency = readStorage<Currency>("currency", "CHF");
+  const budgetChf = readStorage<number | null>("monthly-budget", null);
 
-  const setsToday = exercisesData.setLogs.filter((s) => isToday(s.at)).length;
-  const fitnessSubtitle =
-    setsToday > 0
-      ? `${setsToday} set${setsToday === 1 ? "" : "s"} logged today`
-      : exercisesData.exercises.length > 0
-        ? `${exercisesData.exercises.length} exercises tracked`
-        : "Lifts & progression";
+  const [showQuickSpend, setShowQuickSpend] = useState(false);
+
+  const month = currentMonthKey();
+  const spentThisMonthChf = spending.transactions
+    .filter((t) => monthKey(t.date) === month)
+    .reduce((sum, t) => sum + t.amountChf, 0);
+
+  const unpaidBills = bills.items.filter((i) => !i.paid);
+  const unpaidBillsChf = unpaidBills.reduce((sum, i) => sum + i.amountChf, 0);
+  const hasOverdueBill = unpaidBills.some(
+    (i) => i.dueDate != null && i.dueDate < todayISO(),
+  );
+
+  const financeReady = !finance.loading && !spending.loading && !bills.loading;
 
   const schoolSubtitle =
     school.average != null
@@ -55,45 +86,12 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         }`
       : "Grades & exams";
 
-  const financeSubtitle = finance.loading
-    ? "Net worth & spending"
-    : `${formatMoney(finance.netWorthChf, "CHF")} net worth${
-        finance.stats.oneDayChangePct != null
-          ? ` · ${finance.stats.oneDayChangePct >= 0 ? "+" : ""}${finance.stats.oneDayChangePct.toFixed(1)}%`
-          : ""
-      }`;
-
-  const caloriesSubtitle =
-    !calories.loading && calories.goals
-      ? `${Math.round(calories.totals.kcal)} / ${calories.goals.kcalGoal} kcal today`
-      : "KCAL, macros & weight";
-
-  const fuelSubtitle = fuel.loading
-    ? "Water, caffeine & meals"
-    : `${fuel.waterCount}/${fuel.waterGoal} water · ${fuel.caffeineCount} caffeine`;
-
-  const peakSubtitle = peak.loading
-    ? "Today's energy curve"
-    : peak.doseLogsToday.length > 0
-      ? `${peak.doseLogsToday.length} dose${peak.doseLogsToday.length === 1 ? "" : "s"} logged today`
-      : "No doses logged yet";
-
   const openTasks = tasks.tasks.filter((t) => !t.completed);
   const todosSubtitle = tasks.loading
     ? "Tasks & priorities"
     : openTasks.length > 0
       ? `${openTasks.length} open task${openTasks.length === 1 ? "" : "s"}`
       : "All caught up";
-
-  const today = todayKey();
-  const habitsDoneToday = habits.habits.filter((h) =>
-    h.completedDates.includes(today),
-  ).length;
-  const habitsSubtitle = habits.loading
-    ? "Streaks & routines"
-    : habits.habits.length > 0
-      ? `${habitsDoneToday}/${habits.habits.length} done today`
-      : "No habits yet";
 
   const avgGoalProgress =
     goals.goals.length > 0
@@ -107,85 +105,145 @@ export function HomeView({ onNavigate }: HomeViewProps) {
       ? `${avgGoalProgress}% avg progress`
       : "No goals yet";
 
+  const todayEventCount = events.events.filter((e) => isToday(e.start)).length;
+  const calendarSubtitle = events.loading
+    ? "Day, week & month"
+    : todayEventCount > 0
+      ? `${todayEventCount} event${todayEventCount === 1 ? "" : "s"} today`
+      : "Nothing scheduled today";
+
   return (
     <div>
       <GreetingHero name="Luka" />
-      <div className="home-bento pb-24">
-        <LauncherCard
-          index={1}
-          title="Fitness"
-          subtitle={fitnessSubtitle}
-          tint={ACCENT}
-          className="area-fitness min-h-[180px]"
-          onOpen={() => onNavigate("fitness")}
-        />
-        <LauncherCard
-          index={2}
-          title="School"
-          subtitle={schoolSubtitle}
-          tint={ACCENT}
-          className="area-school min-h-[180px]"
-          onOpen={() => onNavigate("school")}
-        />
-        <LauncherCard
-          index={3}
-          title="Finance"
-          subtitle={financeSubtitle}
-          tint={ACCENT}
-          className="area-finance min-h-[180px]"
-          onOpen={() => onNavigate("finance")}
-        />
-        <LauncherCard
-          index={4}
-          title="KCAL Tracker"
-          subtitle={caloriesSubtitle}
-          tint={ACCENT}
-          className="area-calories min-h-[180px]"
-          onOpen={() => onNavigate("calories")}
-        />
-        <LauncherCard
-          index={5}
-          title="Todays fuel"
-          subtitle={fuelSubtitle}
-          tint={ACCENT}
-          className="area-fuel min-h-[200px]"
-          onOpen={() => onNavigate("fuel")}
-        />
-        <LauncherCard
-          index={6}
-          title="Peak Tracker"
-          subtitle={peakSubtitle}
-          tint={ACCENT}
-          className="area-peak min-h-[180px]"
-          onOpen={() => onNavigate("peak")}
-        />
-        <LauncherCard
-          index={7}
-          title="ToDos"
-          subtitle={todosSubtitle}
-          tint={ACCENT}
-          className="area-todos min-h-[180px]"
-          onOpen={() => onNavigate("todos")}
-        />
-        <LauncherCard
-          index={8}
-          title="Habits"
-          subtitle={habitsSubtitle}
-          tint={ACCENT}
-          className="area-habits min-h-[180px]"
-          onOpen={() => onNavigate("habits")}
-        />
-        <LauncherCard
-          index={9}
-          title="Goals"
-          subtitle={goalsSubtitle}
-          tint={ACCENT}
-          className="area-goals min-h-[200px]"
-          onOpen={() => onNavigate("goals")}
-        />
+
+      <div className="flex flex-col gap-4 pb-24">
+        {!financeReady ? (
+          <div className="py-16 text-center text-sm text-text-dim">
+            Loading your finances…
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <StatTile label="Net worth" value={formatMoney(finance.netWorthChf, currency)} />
+              <StatTile
+                label="Spent this month"
+                value={formatMoney(spentThisMonthChf, currency)}
+              />
+              <StatTile
+                label="Unpaid bills"
+                value={formatMoney(unpaidBillsChf, currency)}
+                tone={hasOverdueBill ? "warn" : "default"}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+              <SpendingPlanCard
+                className="lg:col-span-7"
+                transactions={spending.transactions}
+                currency={currency}
+                budgetChf={budgetChf}
+              />
+              <TopCategoriesCard
+                className="lg:col-span-5"
+                categories={spending.categories}
+                transactions={spending.transactions}
+                currency={currency}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <RecentActivityCard
+                transactions={spending.transactions}
+                categories={spending.categories}
+                currency={currency}
+                onViewAll={() => onNavigate("finance")}
+              />
+              <UpcomingBillsCard
+                items={bills.items}
+                currency={currency}
+                onViewAll={() => onNavigate("finance")}
+              />
+            </div>
+          </>
+        )}
+
+        <div>
+          <p className="mb-3 font-mono text-[11px] tracking-[0.14em] text-text-dim uppercase">
+            Other areas
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <LauncherCard
+              index={1}
+              title="Calendar"
+              subtitle={calendarSubtitle}
+              tint={ACCENT}
+              className="min-h-[140px]"
+              onOpen={() => onNavigate("calendar")}
+            />
+            <LauncherCard
+              index={2}
+              title="School"
+              subtitle={schoolSubtitle}
+              tint={ACCENT}
+              className="min-h-[140px]"
+              onOpen={() => onNavigate("school")}
+            />
+            <LauncherCard
+              index={7}
+              title="ToDos"
+              subtitle={todosSubtitle}
+              tint={ACCENT}
+              className="min-h-[140px]"
+              onOpen={() => onNavigate("todos")}
+            />
+            <LauncherCard
+              index={9}
+              title="Goals"
+              subtitle={goalsSubtitle}
+              tint={ACCENT}
+              className="min-h-[140px]"
+              onOpen={() => onNavigate("goals")}
+            />
+          </div>
+        </div>
       </div>
 
       <BottomTabBar onSelect={onNavigate} />
+
+      {/* Portaled like the tab bar: the view's enter animation transforms this
+          subtree, which would re-anchor position:fixed to the view. */}
+      {createPortal(
+        <button
+          onClick={() => setShowQuickSpend(true)}
+          aria-label="Add spending"
+          className="fixed right-[max(1.1rem,env(safe-area-inset-right))] bottom-[calc(max(0.9rem,env(safe-area-inset-bottom))+4.9rem)] z-30 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white shadow-[0_10px_30px_rgba(251,86,7,0.45)] transition-transform hover:scale-105 active:scale-95"
+        >
+          <Plus size={26} strokeWidth={2.5} />
+        </button>,
+        document.body,
+      )}
+
+      {showQuickSpend && (
+        <AddExpenseSheet
+          categories={spending.categories}
+          currency={currency}
+          onClose={() => setShowQuickSpend(false)}
+          onSave={(entry) => {
+            spending.addTransaction({ date: todayISO(), ...entry });
+            setShowQuickSpend(false);
+          }}
+          onAddCategory={({ name, emoji }) =>
+            spending.addCategory({
+              name,
+              emoji,
+              bucket: "variable",
+              monthlyBudgetChf: null,
+              keywords: [],
+            })
+          }
+          onDeleteCategory={spending.deleteCategory}
+        />
+      )}
     </div>
   );
 }

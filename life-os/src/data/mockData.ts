@@ -1,33 +1,17 @@
 import type {
   CalendarEvent,
-  CalorieEntry,
-  CalorieGoals,
-  Exercise,
-  FuelEntry,
   Goal,
-  Gym,
-  Habit,
   LifeArea,
-  PeakStackItem,
   RecurringRule,
   SavingsGoal,
   SchoolExam,
   SchoolSubject,
   ScoreMetric,
-  SetLog,
   SpendCategory,
   Task,
-  TrainingDay,
   Transaction,
-  WeightEntry,
 } from "../types";
-import { isoDateDaysAgo, isoDaysFromNow, todayISO } from "../utils/date";
-
-function todayAt(hour: number, minute = 0): string {
-  const d = new Date();
-  d.setHours(hour, minute, 0, 0);
-  return d.toISOString();
-}
+import { isoDaysFromNow, todayISO } from "../utils/date";
 
 export const lifeAreas: LifeArea[] = [
   {
@@ -172,98 +156,41 @@ export const mockEvents: CalendarEvent[] = [
     end: isoDaysFromNow(5, 12, 0),
     areaId: "projects",
   },
-];
-
-export const mockHabits: Habit[] = [
+  // Recurring weekly schedule — start/end only serve as the time-of-day
+  // template here; `recurringDays` (0=Sun..6=Sat) is what actually places them.
   {
-    id: "habit-1",
-    name: "Morning run",
+    id: "event-school",
+    title: "School",
+    start: isoDaysFromNow(0, 8, 0),
+    end: isoDaysFromNow(0, 17, 20),
+    areaId: "career",
+    recurringDays: [5, 6], // Fri, Sat
+  },
+  {
+    id: "event-gym",
+    title: "Gym",
+    start: isoDaysFromNow(0, 18, 0),
+    end: isoDaysFromNow(0, 19, 0),
     areaId: "health",
-    completedDates: [1, 2, 3, 5, 6, 8].map(isoDateDaysAgo),
-    createdAt: todayISO(),
+    recurringDays: [0, 2, 4], // Sun, Tue, Thu
   },
   {
-    id: "habit-2",
-    name: "Read 20 minutes",
-    areaId: "projects",
-    completedDates: [0, 1, 2, 3, 4].map(isoDateDaysAgo),
-    createdAt: todayISO(),
+    id: "event-work",
+    title: "Work",
+    start: isoDaysFromNow(0, 7, 30),
+    end: isoDaysFromNow(0, 16, 30),
+    areaId: "career",
+    recurringDays: [1, 2, 3, 4], // Mon-Thu
   },
   {
-    id: "habit-3",
-    name: "Journal",
-    areaId: "relationships",
-    completedDates: [1, 3, 4].map(isoDateDaysAgo),
-    createdAt: todayISO(),
-  },
-  {
-    id: "habit-4",
-    name: "No junk food",
-    areaId: "health",
-    completedDates: [0, 1].map(isoDateDaysAgo),
-    createdAt: todayISO(),
+    id: "event-study",
+    title: "Study session",
+    start: isoDaysFromNow(0, 19, 0),
+    end: isoDaysFromNow(0, 20, 30),
+    areaId: "career",
+    recurringDays: [0, 1, 2, 3, 4, 5, 6], // every day
   },
 ];
-
-export const mockFuelEntries: FuelEntry[] = [
-  { id: "fuel-1", kind: "water", label: "Water", at: todayAt(7, 45) },
-  { id: "fuel-2", kind: "water", label: "Water", at: todayAt(9, 30) },
-  { id: "fuel-3", kind: "caffeine", label: "Coffee", at: todayAt(8, 0) },
-  {
-    id: "fuel-4",
-    kind: "meal",
-    label: "Oatmeal with berries",
-    kcal: 350,
-    at: todayAt(8, 15),
-  },
-  { id: "fuel-5", kind: "supplement", label: "Vitamin D", at: todayAt(8, 20) },
-];
-
-export const defaultSupplementList = ["Vitamin D", "Omega-3", "Magnesium"];
-
-export const defaultPeakStack: PeakStackItem[] = [
-  { id: "coffee", name: "Coffee", mg: 95 },
-  { id: "espresso", name: "Espresso", mg: 75 },
-  { id: "energy", name: "Energy Drink", mg: 160 },
-  { id: "matcha", name: "Matcha", mg: 70 },
-];
-
-export const mockCalorieEntries: CalorieEntry[] = [
-  {
-    id: "cal-1",
-    label: "Oatmeal with berries",
-    kcal: 350,
-    proteinG: 12,
-    carbsG: 58,
-    fatG: 7,
-    at: todayAt(8, 15),
-  },
-  {
-    id: "cal-2",
-    label: "Grilled chicken salad",
-    kcal: 520,
-    proteinG: 42,
-    carbsG: 28,
-    fatG: 24,
-    at: todayAt(12, 45),
-  },
-  {
-    id: "cal-3",
-    label: "Protein shake",
-    kcal: 180,
-    proteinG: 30,
-    carbsG: 8,
-    fatG: 2,
-    at: todayAt(16, 0),
-  },
-];
-
-export const defaultCalorieGoals: CalorieGoals = {
-  kcalGoal: 2200,
-  proteinGoal: 150,
-  carbsGoal: 220,
-  fatGoal: 70,
-};
 
 export const mockGoals: Goal[] = [
   {
@@ -298,176 +225,6 @@ export const mockGoals: Goal[] = [
     progress: 20,
     createdAt: todayISO(),
   },
-];
-
-export const gyms: Gym[] = [
-  { id: "home", name: "Home Gym" },
-  { id: "comm", name: "Commercial Gym" },
-];
-
-export const trainingDays: TrainingDay[] = [
-  { id: "push", name: "Push" },
-  { id: "pull", name: "Pull" },
-  { id: "legs", name: "Legs" },
-];
-
-export const mockExercises: Exercise[] = [
-  {
-    id: "ex-bench",
-    name: "Bench press",
-    gymId: "comm",
-    dayId: "push",
-    repMin: 5,
-    repMax: 8,
-    step: 2.5,
-    startWeight: 60,
-    bodyweight: false,
-    restSeconds: 120,
-  },
-  {
-    id: "ex-ohp",
-    name: "Overhead press",
-    gymId: "comm",
-    dayId: "push",
-    repMin: 5,
-    repMax: 8,
-    step: 2.5,
-    startWeight: 35,
-    bodyweight: false,
-    restSeconds: 120,
-  },
-  {
-    id: "ex-pushdown",
-    name: "Tricep pushdown",
-    gymId: "comm",
-    dayId: "push",
-    repMin: 8,
-    repMax: 12,
-    step: 2.5,
-    startWeight: 25,
-    bodyweight: false,
-    restSeconds: 75,
-  },
-  {
-    id: "ex-pullup",
-    name: "Pull-ups",
-    gymId: "both",
-    dayId: "pull",
-    repMin: 5,
-    repMax: 10,
-    step: 1,
-    startWeight: 0,
-    bodyweight: true,
-    restSeconds: 120,
-  },
-  {
-    id: "ex-row",
-    name: "Barbell row",
-    gymId: "comm",
-    dayId: "pull",
-    repMin: 6,
-    repMax: 10,
-    step: 2.5,
-    startWeight: 50,
-    bodyweight: false,
-    restSeconds: 120,
-  },
-  {
-    id: "ex-curl",
-    name: "Bicep curl",
-    gymId: "comm",
-    dayId: "pull",
-    repMin: 8,
-    repMax: 12,
-    step: 1.25,
-    startWeight: 15,
-    bodyweight: false,
-    restSeconds: 75,
-  },
-  {
-    id: "ex-squat",
-    name: "Back squat",
-    gymId: "comm",
-    dayId: "legs",
-    repMin: 5,
-    repMax: 8,
-    step: 5,
-    startWeight: 80,
-    bodyweight: false,
-    restSeconds: 150,
-  },
-  {
-    id: "ex-rdl",
-    name: "Romanian deadlift",
-    gymId: "comm",
-    dayId: "legs",
-    repMin: 6,
-    repMax: 10,
-    step: 5,
-    startWeight: 60,
-    bodyweight: false,
-    restSeconds: 120,
-  },
-  {
-    id: "ex-legpress",
-    name: "Leg press",
-    gymId: "comm",
-    dayId: "legs",
-    repMin: 8,
-    repMax: 12,
-    step: 5,
-    startWeight: 100,
-    bodyweight: false,
-    restSeconds: 100,
-  },
-];
-
-export const mockSetLogs: SetLog[] = [
-  {
-    id: "set-1",
-    exerciseId: "ex-bench",
-    weight: 60,
-    reps: 6,
-    at: isoDaysFromNow(-9, 18, 0),
-  },
-  {
-    id: "set-2",
-    exerciseId: "ex-bench",
-    weight: 60,
-    reps: 7,
-    at: isoDaysFromNow(-6, 18, 0),
-  },
-  {
-    id: "set-3",
-    exerciseId: "ex-bench",
-    weight: 60,
-    reps: 8,
-    at: isoDaysFromNow(-3, 18, 5),
-  },
-  {
-    id: "set-4",
-    exerciseId: "ex-squat",
-    weight: 80,
-    reps: 5,
-    at: isoDaysFromNow(-4, 19, 0),
-  },
-  {
-    id: "set-5",
-    exerciseId: "ex-pullup",
-    weight: 0,
-    reps: 8,
-    at: isoDaysFromNow(-5, 18, 30),
-  },
-];
-
-export const mockWeightEntries: WeightEntry[] = [
-  { id: "wt-1", weightKg: 82.4, at: isoDaysFromNow(-6, 7, 0) },
-  { id: "wt-2", weightKg: 82.1, at: isoDaysFromNow(-5, 7, 0) },
-  { id: "wt-3", weightKg: 81.9, at: isoDaysFromNow(-4, 7, 5) },
-  { id: "wt-4", weightKg: 81.8, at: isoDaysFromNow(-3, 7, 0) },
-  { id: "wt-5", weightKg: 81.6, at: isoDaysFromNow(-2, 7, 10) },
-  { id: "wt-6", weightKg: 81.5, at: isoDaysFromNow(-1, 7, 0) },
-  { id: "wt-7", weightKg: 81.3, at: isoDaysFromNow(0, 7, 0) },
 ];
 
 // Deterministic pseudo-random so the seeded trend looks organic but is stable across reloads.
@@ -519,15 +276,15 @@ export const mockScores: ScoreMetric[] = baseScores.map((score) => ({
 // defaults with stable ids that recurring rules + goals can reference.
 
 export const defaultSpendCategories: SpendCategory[] = [
-  { id: "cat-rent", name: "Rent", bucket: "fixed", monthlyBudgetChf: 1500, keywords: ["miete", "rent", "wohnung"], createdAt: "2020-01-01T00:00:00.000Z" },
-  { id: "cat-insurance", name: "Insurance", bucket: "fixed", monthlyBudgetChf: 320, keywords: ["versicherung", "insurance", "krankenkasse", "css", "helsana"], createdAt: "2020-01-01T00:00:00.000Z" },
-  { id: "cat-transport", name: "Transport", bucket: "fixed", monthlyBudgetChf: 120, keywords: ["sbb", "zvv", "ga", "transport", "mobility"], createdAt: "2020-01-01T00:00:00.000Z" },
-  { id: "cat-subs", name: "Subscriptions", bucket: "fixed", monthlyBudgetChf: 70, keywords: ["netflix", "spotify", "abo", "subscription", "icloud", "youtube"], createdAt: "2020-01-01T00:00:00.000Z" },
-  { id: "cat-groceries", name: "Groceries", bucket: "variable", monthlyBudgetChf: 500, keywords: ["migros", "coop", "aldi", "lidl", "denner", "grocery"], createdAt: "2020-01-01T00:00:00.000Z" },
-  { id: "cat-dining", name: "Dining out", bucket: "variable", monthlyBudgetChf: 220, keywords: ["restaurant", "cafe", "coffee", "starbucks", "mcdonald", "uber eats", "bar"], createdAt: "2020-01-01T00:00:00.000Z" },
-  { id: "cat-shopping", name: "Shopping", bucket: "variable", monthlyBudgetChf: 180, keywords: ["zalando", "galaxus", "digitec", "amazon", "shop", "zara"], createdAt: "2020-01-01T00:00:00.000Z" },
-  { id: "cat-savings", name: "Savings transfer", bucket: "savings", monthlyBudgetChf: 800, keywords: ["sparen", "savings", "transfer sparkonto"], createdAt: "2020-01-01T00:00:00.000Z" },
-  { id: "cat-3a", name: "Säule 3a", bucket: "savings", monthlyBudgetChf: 588, keywords: ["3a", "vorsorge", "viac", "frankly"], createdAt: "2020-01-01T00:00:00.000Z" },
+  { id: "cat-rent", name: "Rent", bucket: "fixed", emoji: "🏠", monthlyBudgetChf: 1500, keywords: ["miete", "rent", "wohnung"], createdAt: "2020-01-01T00:00:00.000Z" },
+  { id: "cat-insurance", name: "Insurance", bucket: "fixed", emoji: "🛡️", monthlyBudgetChf: 320, keywords: ["versicherung", "insurance", "krankenkasse", "css", "helsana"], createdAt: "2020-01-01T00:00:00.000Z" },
+  { id: "cat-transport", name: "Transport", bucket: "fixed", emoji: "🚌", monthlyBudgetChf: 120, keywords: ["sbb", "zvv", "ga", "transport", "mobility"], createdAt: "2020-01-01T00:00:00.000Z" },
+  { id: "cat-subs", name: "Subscriptions", bucket: "fixed", emoji: "📺", monthlyBudgetChf: 70, keywords: ["netflix", "spotify", "abo", "subscription", "icloud", "youtube"], createdAt: "2020-01-01T00:00:00.000Z" },
+  { id: "cat-groceries", name: "Groceries", bucket: "variable", emoji: "🛒", monthlyBudgetChf: 500, keywords: ["migros", "coop", "aldi", "lidl", "denner", "grocery"], createdAt: "2020-01-01T00:00:00.000Z" },
+  { id: "cat-dining", name: "Dining out", bucket: "variable", emoji: "🍔", monthlyBudgetChf: 220, keywords: ["restaurant", "cafe", "coffee", "starbucks", "mcdonald", "uber eats", "bar"], createdAt: "2020-01-01T00:00:00.000Z" },
+  { id: "cat-shopping", name: "Shopping", bucket: "variable", emoji: "🛍️", monthlyBudgetChf: 180, keywords: ["zalando", "galaxus", "digitec", "amazon", "shop", "zara"], createdAt: "2020-01-01T00:00:00.000Z" },
+  { id: "cat-savings", name: "Savings transfer", bucket: "savings", emoji: "💰", monthlyBudgetChf: 800, keywords: ["sparen", "savings", "transfer sparkonto"], createdAt: "2020-01-01T00:00:00.000Z" },
+  { id: "cat-3a", name: "Säule 3a", bucket: "savings", emoji: "🏦", monthlyBudgetChf: 588, keywords: ["3a", "vorsorge", "viac", "frankly"], createdAt: "2020-01-01T00:00:00.000Z" },
 ];
 
 interface SeedSpec {

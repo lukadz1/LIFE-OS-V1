@@ -31,14 +31,10 @@ export interface CalendarEvent {
   end: string;
   areaId: LifeAreaId | null;
   location?: string;
-}
-
-export interface Habit {
-  id: string;
-  name: string;
-  areaId: LifeAreaId | null;
-  completedDates: string[];
-  createdAt: string;
+  /** Weekday indices (0 = Sunday .. 6 = Saturday) this event repeats on. When
+   * set, `start`/`end` only supply the time-of-day template — the event
+   * recurs indefinitely on every matching weekday instead of occurring once. */
+  recurringDays?: number[];
 }
 
 export interface Goal {
@@ -58,16 +54,6 @@ export interface UserProfile {
   age: number | null;
   sex: "m" | "f" | null;
   activityHrsPerWeek: number | null;
-}
-
-export type FuelKind = "water" | "caffeine" | "meal" | "supplement";
-
-export interface FuelEntry {
-  id: string;
-  kind: FuelKind;
-  label: string;
-  kcal?: number;
-  at: string;
 }
 
 export type Currency = "CHF" | "USD" | "EUR" | "GBP";
@@ -111,6 +97,8 @@ export interface SpendCategory {
   id: string;
   name: string;
   bucket: TxBucket;
+  /** Single emoji shown on chips and lists; name-based fallback when unset. */
+  emoji?: string;
   /** Monthly budget (Soll) in CHF; null = untracked. */
   monthlyBudgetChf: number | null;
   /** Substrings used to auto-assign this category on CSV import. */
@@ -157,75 +145,6 @@ export interface SavingsGoal {
   createdAt: string;
 }
 
-export interface Gym {
-  id: string;
-  name: string;
-}
-
-export interface TrainingDay {
-  id: string;
-  name: string;
-}
-
-export interface SplitDay {
-  id: string;
-  name: string;
-  exerciseIds: string[];
-  createdAt: string;
-}
-
-export interface Exercise {
-  id: string;
-  name: string;
-  gymId: string | "both";
-  dayId: string;
-  repMin: number;
-  repMax: number;
-  step: number;
-  startWeight: number;
-  bodyweight: boolean;
-  restSeconds: number;
-  starred?: boolean;
-}
-
-export interface SetLog {
-  id: string;
-  exerciseId: string;
-  weight: number;
-  reps: number;
-  at: string;
-}
-
-export interface WeightEntry {
-  id: string;
-  weightKg: number;
-  at: string;
-}
-
-export interface ProgressPhoto {
-  id: string;
-  dataUrl: string;
-  weightKg: number | null;
-  at: string;
-}
-
-export interface CalorieEntry {
-  id: string;
-  label: string;
-  kcal: number;
-  proteinG: number;
-  carbsG: number;
-  fatG: number;
-  at: string;
-}
-
-export interface CalorieGoals {
-  kcalGoal: number;
-  proteinGoal: number;
-  carbsGoal: number;
-  fatGoal: number;
-}
-
 // ---- School (grade tracker) ----
 
 export interface SchoolSubject {
@@ -242,34 +161,6 @@ export interface SchoolExam {
   date: string; // ISO
   fileName: string;
   fileDataUrl: string | null;
-}
-
-// ---- Peak tracker (caffeine/energy curve) ----
-
-export interface PeakStackItem {
-  id: string;
-  name: string;
-  mg: number;
-}
-
-export interface PeakDoseLog {
-  id: string;
-  itemId: string;
-  mg: number;
-  at: string; // full ISO timestamp of the "Log now" tap
-}
-
-export interface PeakFeelLog {
-  id: string;
-  hour: number; // fractional hour of day, bucketed to the nearest half hour
-  value: number; // 0-100
-  date: string; // ISO YYYY-MM-DD this point belongs to
-}
-
-export interface PeakPlanItem {
-  id: string;
-  text: string;
-  date: string; // ISO YYYY-MM-DD
 }
 
 export type ScoreId = "financial" | "wellness";

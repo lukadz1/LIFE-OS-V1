@@ -8,14 +8,10 @@ import { readStorage, writeStorage } from "./data/storage";
 import { useLifeAreas } from "./hooks/useLifeAreas";
 import { useProfile } from "./hooks/useProfile";
 import { getTimeGreeting } from "./utils/date";
-import { CaloriesView } from "./views/CaloriesView";
+import { CalendarView } from "./views/CalendarView";
 import { FinanceView } from "./views/FinanceView";
-import { FitnessView } from "./views/FitnessView";
-import { FuelView } from "./views/FuelView";
 import { GoalsView } from "./views/GoalsView";
-import { HabitsView } from "./views/HabitsView";
 import { HomeView } from "./views/HomeView";
-import { PeakView } from "./views/PeakView";
 import { SchoolView } from "./views/SchoolView";
 import { TodosView } from "./views/TodosView";
 
@@ -89,10 +85,10 @@ function Header({ theme, onToggleTheme, onOpenSettings, minimal }: HeaderProps) 
         <p className="font-mono text-[11px] tracking-[0.14em] text-text-dim uppercase">
           {today}
         </p>
-        <h1 className="gradient-title mt-0.5 font-serif text-[38px] font-normal tracking-tight italic sm:text-[46px]">
+        <h1 className="gradient-title mt-0.5 font-sans text-[38px] font-normal tracking-tight sm:text-[46px]">
           Life OS
         </h1>
-        <p className="mt-1 text-[15px] text-text-dim italic">
+        <p className="mt-1 text-[15px] text-text-dim">
           {getTimeGreeting()}, Luka
         </p>
       </div>
@@ -172,13 +168,9 @@ function App() {
         }`}
       >
         {view === "home" && <HomeView onNavigate={handleViewChange} />}
+        {view === "calendar" && <CalendarView areas={areas} />}
         {view === "todos" && <TodosView areas={areas} />}
         {view === "finance" && <FinanceView />}
-        {view === "fitness" && <FitnessView />}
-        {view === "habits" && <HabitsView areas={areas} />}
-        {view === "fuel" && <FuelView />}
-        {view === "peak" && <PeakView />}
-        {view === "calories" && <CaloriesView />}
         {view === "goals" && <GoalsView areas={areas} />}
         {view === "school" && <SchoolView />}
       </main>

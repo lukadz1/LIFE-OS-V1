@@ -83,7 +83,7 @@ export function AddExamModal({ subjects, onClose, onSave }: AddExamModalProps) {
         className="w-full max-w-[380px] rounded-[18px] border border-border bg-surface p-6 shadow-2xl"
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-serif text-[21px] text-text italic">Add exam</h2>
+          <h2 className="font-sans text-[21px] text-text">Add exam</h2>
           <button
             onClick={onClose}
             aria-label="Close"

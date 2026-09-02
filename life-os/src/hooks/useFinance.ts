@@ -193,6 +193,21 @@ export function useFinance() {
     });
   }, []);
 
+  /** Shift a manually-valued account (bank etc.) by deltaChf — e.g. -20 after
+      logging a 20 CHF spend. Price-tracked accounts (quantity set) are left
+      alone: their value comes from live prices, not a stored number. */
+  const adjustAccountValue = useCallback((id: string, deltaChf: number) => {
+    setAccounts((prev) => {
+      const next = prev.map((a) =>
+        a.id === id && a.quantity == null
+          ? { ...a, manualValueChf: (a.manualValueChf ?? 0) + deltaChf }
+          : a,
+      );
+      void saveFinanceAccounts(next);
+      return next;
+    });
+  }, []);
+
   const refreshPrices = useCallback(
     async (category: AssetCategory) => {
       setRefreshingCategory(category);
@@ -214,6 +229,7 @@ export function useFinance() {
     refreshingCategory,
     addAccount,
     deleteAccount,
+    adjustAccountValue,
     refreshPrices,
   };
 }

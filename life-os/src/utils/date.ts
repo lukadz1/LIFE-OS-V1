@@ -124,3 +124,44 @@ export function getWeekDates(d: Date): Date[] {
     return c;
   });
 }
+
+export function addDays(d: Date, days: number): Date {
+  const copy = new Date(d);
+  copy.setDate(copy.getDate() + days);
+  return copy;
+}
+
+export function addMonths(d: Date, months: number): Date {
+  const copy = new Date(d);
+  copy.setMonth(copy.getMonth() + months);
+  return copy;
+}
+
+export function addYears(d: Date, years: number): Date {
+  const copy = new Date(d);
+  copy.setFullYear(copy.getFullYear() + years);
+  return copy;
+}
+
+export function startOfMonth(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+
+export function isSameMonth(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
+/** Mon-start 6x7 grid of dates covering `d`'s month, including the leading
+ * and trailing days needed to fill whole weeks. */
+export function getMonthMatrix(d: Date): Date[][] {
+  const firstOfMonth = startOfMonth(d);
+  const gridStart = startOfWeek(firstOfMonth);
+  const weeks: Date[][] = [];
+  let cursor = gridStart;
+  for (let w = 0; w < 6; w++) {
+    const week = Array.from({ length: 7 }, (_, i) => addDays(cursor, i));
+    weeks.push(week);
+    cursor = addDays(cursor, 7);
+  }
+  return weeks;
+}

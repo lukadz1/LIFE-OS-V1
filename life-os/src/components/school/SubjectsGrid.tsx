@@ -12,7 +12,7 @@ export function SubjectsGrid({ subjects }: { subjects: SchoolSubjectStanding[] }
           >
             <p className="truncate text-[13px] text-text-dim">{subj.name}</p>
             <p
-              className="mt-2 font-serif text-[27px] italic"
+              className="mt-2 font-sans text-[27px]"
               style={{ color: subj.color }}
             >
               {subj.grade != null ? subj.grade.toFixed(1) : "—"}

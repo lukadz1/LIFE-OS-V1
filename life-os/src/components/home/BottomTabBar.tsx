@@ -1,13 +1,9 @@
 import {
-  Droplet,
-  Dumbbell,
-  Flame,
+  CalendarDays,
   GraduationCap,
-  Repeat,
   SquareCheck,
   Target,
   Wallet,
-  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { createPortal } from "react-dom";
@@ -20,14 +16,10 @@ interface TabItem {
 }
 
 const TABS: TabItem[] = [
-  { id: "fitness", label: "Fitness", icon: Dumbbell },
+  { id: "calendar", label: "Calendar", icon: CalendarDays },
   { id: "school", label: "School", icon: GraduationCap },
   { id: "finance", label: "Finance", icon: Wallet },
-  { id: "calories", label: "KCAL", icon: Flame },
-  { id: "fuel", label: "Fuel", icon: Droplet },
-  { id: "peak", label: "Peak", icon: Zap },
   { id: "todos", label: "ToDos", icon: SquareCheck },
-  { id: "habits", label: "Habits", icon: Repeat },
   { id: "goals", label: "Goals", icon: Target },
 ];
 

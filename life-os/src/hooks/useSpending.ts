@@ -23,6 +23,7 @@ import { advanceDate } from "../utils/spendingEngine";
 export interface CategoryInput {
   name: string;
   bucket: TxBucket;
+  emoji?: string;
   monthlyBudgetChf: number | null;
   keywords: string[];
 }
@@ -88,11 +89,12 @@ export function useSpending() {
   // computed — matching useFinance, so a load resolving can never race a save.
 
   // ---- Categories ----
-  const addCategory = useCallback((input: CategoryInput) => {
+  const addCategory = useCallback((input: CategoryInput): SpendCategory => {
     const cat: SpendCategory = {
       id: createId(),
       name: input.name.trim(),
       bucket: input.bucket,
+      emoji: input.emoji,
       monthlyBudgetChf: input.monthlyBudgetChf,
       keywords: input.keywords,
       createdAt: new Date().toISOString(),
@@ -102,6 +104,7 @@ export function useSpending() {
       void saveSpendCategories(next);
       return next;
     });
+    return cat;
   }, []);
 
   const updateCategory = useCallback(

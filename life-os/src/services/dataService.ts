@@ -1,54 +1,32 @@
 import {
-  defaultCalorieGoals,
-  defaultPeakStack,
   defaultSpendCategories,
-  defaultSupplementList,
   lifeAreas,
-  mockCalorieEntries,
   mockEvents,
-  mockExercises,
-  mockFuelEntries,
   mockGoals,
-  mockHabits,
   mockRecurringRules,
   mockSavingsGoals,
   mockSchoolExams,
   mockSchoolSubjects,
   mockScores,
-  mockSetLogs,
   mockTasks,
   mockTransactions,
-  mockWeightEntries,
 } from "../data/mockData";
 import { readStorage, writeStorage } from "../data/storage";
 import type {
   BillDebt,
   CalendarEvent,
-  CalorieEntry,
-  CalorieGoals,
-  Exercise,
   FinanceAccount,
-  FuelEntry,
   Goal,
-  Habit,
   LifeArea,
   NetWorthSnapshot,
-  PeakDoseLog,
-  PeakFeelLog,
-  PeakPlanItem,
-  PeakStackItem,
-  ProgressPhoto,
   RecurringRule,
   SavingsGoal,
   SchoolExam,
   SchoolSubject,
   ScoreMetric,
-  SetLog,
   SpendCategory,
-  SplitDay,
   Task,
   Transaction,
-  WeightEntry,
 } from "../types";
 
 // This module is the only place the app talks to for data. Every call is async
@@ -94,19 +72,6 @@ export async function saveEvents(events: CalendarEvent[]): Promise<CalendarEvent
   return delay(events);
 }
 
-// ---- Habits ----
-
-const HABITS_KEY = "habits";
-
-export async function getHabits(): Promise<Habit[]> {
-  return delay(readStorage<Habit[]>(HABITS_KEY, mockHabits));
-}
-
-export async function saveHabits(habits: Habit[]): Promise<Habit[]> {
-  writeStorage(HABITS_KEY, habits);
-  return delay(habits);
-}
-
 // ---- Goals ----
 
 const GOALS_KEY = "goals";
@@ -149,60 +114,6 @@ export async function saveNetWorthHistory(
 ): Promise<NetWorthSnapshot[]> {
   writeStorage(NET_WORTH_HISTORY_KEY, history);
   return delay(history);
-}
-
-// ---- Peak tracker (caffeine/energy curve) ----
-
-const PEAK_STACK_KEY = "peak-stack";
-
-export async function getPeakStack(): Promise<PeakStackItem[]> {
-  return delay(readStorage<PeakStackItem[]>(PEAK_STACK_KEY, defaultPeakStack));
-}
-
-export async function savePeakStack(
-  stack: PeakStackItem[],
-): Promise<PeakStackItem[]> {
-  writeStorage(PEAK_STACK_KEY, stack);
-  return delay(stack);
-}
-
-const PEAK_DOSE_LOGS_KEY = "peak-dose-logs";
-
-export async function getPeakDoseLogs(): Promise<PeakDoseLog[]> {
-  return delay(readStorage<PeakDoseLog[]>(PEAK_DOSE_LOGS_KEY, []));
-}
-
-export async function savePeakDoseLogs(
-  logs: PeakDoseLog[],
-): Promise<PeakDoseLog[]> {
-  writeStorage(PEAK_DOSE_LOGS_KEY, logs);
-  return delay(logs);
-}
-
-const PEAK_FEEL_LOGS_KEY = "peak-feel-logs";
-
-export async function getPeakFeelLogs(): Promise<PeakFeelLog[]> {
-  return delay(readStorage<PeakFeelLog[]>(PEAK_FEEL_LOGS_KEY, []));
-}
-
-export async function savePeakFeelLogs(
-  logs: PeakFeelLog[],
-): Promise<PeakFeelLog[]> {
-  writeStorage(PEAK_FEEL_LOGS_KEY, logs);
-  return delay(logs);
-}
-
-const PEAK_PLAN_KEY = "peak-plan";
-
-export async function getPeakPlan(): Promise<PeakPlanItem[]> {
-  return delay(readStorage<PeakPlanItem[]>(PEAK_PLAN_KEY, []));
-}
-
-export async function savePeakPlan(
-  items: PeakPlanItem[],
-): Promise<PeakPlanItem[]> {
-  writeStorage(PEAK_PLAN_KEY, items);
-  return delay(items);
 }
 
 // ---- Bills & debts to pay ----
@@ -275,128 +186,6 @@ export async function saveSavingsGoals(
 ): Promise<SavingsGoal[]> {
   writeStorage(SAVINGS_GOALS_KEY, goals);
   return delay(goals);
-}
-
-// ---- Fuel (water / caffeine / meals / supplements) ----
-
-const FUEL_ENTRIES_KEY = "fuel-entries";
-
-export async function getFuelEntries(): Promise<FuelEntry[]> {
-  return delay(readStorage<FuelEntry[]>(FUEL_ENTRIES_KEY, mockFuelEntries));
-}
-
-export async function saveFuelEntries(
-  entries: FuelEntry[],
-): Promise<FuelEntry[]> {
-  writeStorage(FUEL_ENTRIES_KEY, entries);
-  return delay(entries);
-}
-
-const SUPPLEMENT_LIST_KEY = "supplement-list";
-
-export async function getSupplementList(): Promise<string[]> {
-  return delay(readStorage<string[]>(SUPPLEMENT_LIST_KEY, defaultSupplementList));
-}
-
-export async function saveSupplementList(list: string[]): Promise<string[]> {
-  writeStorage(SUPPLEMENT_LIST_KEY, list);
-  return delay(list);
-}
-
-// ---- Calorie tracker ----
-
-const CALORIE_ENTRIES_KEY = "calorie-entries";
-
-export async function getCalorieEntries(): Promise<CalorieEntry[]> {
-  return delay(
-    readStorage<CalorieEntry[]>(CALORIE_ENTRIES_KEY, mockCalorieEntries),
-  );
-}
-
-export async function saveCalorieEntries(
-  entries: CalorieEntry[],
-): Promise<CalorieEntry[]> {
-  writeStorage(CALORIE_ENTRIES_KEY, entries);
-  return delay(entries);
-}
-
-const CALORIE_GOALS_KEY = "calorie-goals";
-
-export async function getCalorieGoals(): Promise<CalorieGoals> {
-  return delay(readStorage<CalorieGoals>(CALORIE_GOALS_KEY, defaultCalorieGoals));
-}
-
-export async function saveCalorieGoals(
-  goals: CalorieGoals,
-): Promise<CalorieGoals> {
-  writeStorage(CALORIE_GOALS_KEY, goals);
-  return delay(goals);
-}
-
-// ---- Exercises + set logs ----
-
-const EXERCISES_KEY = "exercises";
-
-export async function getExercises(): Promise<Exercise[]> {
-  return delay(readStorage<Exercise[]>(EXERCISES_KEY, mockExercises));
-}
-
-export async function saveExercises(exercises: Exercise[]): Promise<Exercise[]> {
-  writeStorage(EXERCISES_KEY, exercises);
-  return delay(exercises);
-}
-
-const SET_LOGS_KEY = "set-logs";
-
-export async function getSetLogs(): Promise<SetLog[]> {
-  return delay(readStorage<SetLog[]>(SET_LOGS_KEY, mockSetLogs));
-}
-
-export async function saveSetLogs(logs: SetLog[]): Promise<SetLog[]> {
-  writeStorage(SET_LOGS_KEY, logs);
-  return delay(logs);
-}
-
-const SPLIT_DAYS_KEY = "split-days";
-
-export async function getSplitDays(): Promise<SplitDay[]> {
-  return delay(readStorage<SplitDay[]>(SPLIT_DAYS_KEY, []));
-}
-
-export async function saveSplitDays(days: SplitDay[]): Promise<SplitDay[]> {
-  writeStorage(SPLIT_DAYS_KEY, days);
-  return delay(days);
-}
-
-// ---- Bodyweight ----
-
-const WEIGHT_ENTRIES_KEY = "weight-entries";
-
-export async function getWeightEntries(): Promise<WeightEntry[]> {
-  return delay(readStorage<WeightEntry[]>(WEIGHT_ENTRIES_KEY, mockWeightEntries));
-}
-
-export async function saveWeightEntries(
-  entries: WeightEntry[],
-): Promise<WeightEntry[]> {
-  writeStorage(WEIGHT_ENTRIES_KEY, entries);
-  return delay(entries);
-}
-
-// ---- Progress photos ----
-// Starts empty — can't seed a personal photo.
-
-const PROGRESS_PHOTOS_KEY = "progress-photos";
-
-export async function getProgressPhotos(): Promise<ProgressPhoto[]> {
-  return delay(readStorage<ProgressPhoto[]>(PROGRESS_PHOTOS_KEY, []));
-}
-
-export async function saveProgressPhotos(
-  photos: ProgressPhoto[],
-): Promise<ProgressPhoto[]> {
-  writeStorage(PROGRESS_PHOTOS_KEY, photos);
-  return delay(photos);
 }
 
 // ---- School (grade tracker) ----

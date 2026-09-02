@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #050506;
-  --color-surface: #131316;
-  --color-surface-raised: #1d1d20;
+  --color-bg: #0e0e10;
+  --color-surface: #18181b;
+  --color-surface-raised: #232326;
   --color-border: rgba(255, 255, 255, 0.09);
   --color-accent: #fb5607;
   --color-accent-contrast: #000000;
@@ -14,13 +14,10 @@
   --color-hover: rgba(255, 255, 255, 0.045);
   --color-check: rgba(255, 255, 255, 0.25);
   --color-gauge-track: #26262a;
-  --color-coach-blob-1: #ffcb9c;
-  --color-coach-blob-2: #fb8a3c;
-  --color-coach-blob-3: #c2410c;
-  --color-coach-eye: #12100e;
 
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text",
-    "Segoe UI Variable", "Segoe UI", system-ui, Roboto, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "SF Pro Display", "Segoe UI Variable", "Segoe UI", system-ui, Roboto,
+    sans-serif;
   --font-serif: "Instrument Serif", Georgia, "Times New Roman", serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas,
     monospace;
@@ -28,13 +25,12 @@
   --animate-status-pulse: status-pulse 2s ease-out infinite;
   --animate-view-in-right: view-in-right 300ms cubic-bezier(0.16, 1, 0.3, 1);
   --animate-view-in-left: view-in-left 300ms cubic-bezier(0.16, 1, 0.3, 1);
-  --animate-drift: drift 36s ease-in-out infinite alternate;
-  --animate-coach-idle: coach-idle 9s ease-in-out infinite;
-  --animate-coach-blink: coach-blink 4.5s ease-in-out infinite;
+  --animate-bolb-idle: bolb-idle 9s ease-in-out infinite;
+  --animate-bolb-blink: bolb-blink 4.5s ease-in-out infinite;
 
-  /* Organic wobble so Coach's blob body reads as soft and alive rather than
-     a static circle — five keyframe states of skewed border-radius. */
-  @keyframes coach-idle {
+  /* Organic wobble so Coach's head reads as soft and alive rather than a
+     static circle — five keyframe states of skewed border-radius. */
+  @keyframes bolb-idle {
     0% {
       border-radius: 46% 54% 61% 39% / 45% 48% 52% 55%;
     }
@@ -52,7 +48,7 @@
     }
   }
 
-  @keyframes coach-blink {
+  @keyframes bolb-blink {
     0%,
     88%,
     100% {
@@ -147,31 +143,21 @@
     }
   }
 
-  @keyframes drift {
-    0% {
-      transform: translate3d(0, 0, 0) scale(1);
-    }
-    100% {
-      transform: translate3d(-34px, 22px, 0) scale(1.07);
-    }
-  }
-
-  --animate-glow-pulse: glow-pulse 7s ease-in-out infinite alternate;
-
-  @keyframes glow-pulse {
-    0%,
-    100% {
-      opacity: 0.85;
-      filter: blur(46px) saturate(1.3) brightness(1);
-    }
-    50% {
-      opacity: 1;
-      filter: blur(52px) saturate(1.6) brightness(1.14);
-    }
-  }
-
   --animate-scrub-pulse: scrub-pulse 1.4s ease-in-out infinite;
   --animate-pill-in: pill-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-sheet-in: sheet-in 300ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Bottom sheet (quick-add expense) sliding up from the edge. */
+  @keyframes sheet-in {
+    from {
+      opacity: 0;
+      transform: translateY(32px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 
   /* Breathing halo behind the chart's hover/feel dots. */
   @keyframes scrub-pulse {
@@ -200,7 +186,6 @@
 
 :root {
   color-scheme: dark;
-  --coach-glow: 0 0 26px rgba(251, 138, 60, 0.45), 0 10px 30px rgba(0, 0, 0, 0.45);
 }
 
 :root[data-theme="light"] {
@@ -218,15 +203,6 @@
   --color-hover: rgba(0, 0, 0, 0.035);
   --color-check: rgba(0, 0, 0, 0.25);
   --color-gauge-track: #e5e5ea;
-  --color-coach-blob-1: #ffcb9c;
-  --color-coach-blob-2: #fb8a3c;
-  --color-coach-blob-3: #c2410c;
-  --color-coach-eye: #12100e;
-  /* White-on-white would vanish against the light background — swap the
-     soft glow for a warm accent-tinted halo plus a hairline ring so the
-     blob's silhouette stays readable. */
-  --coach-glow: 0 0 16px rgba(251, 86, 7, 0.16), 0 8px 22px rgba(0, 0, 0, 0.14),
-    0 0 0 1px rgba(0, 0, 0, 0.07);
 }
 
 html,
@@ -270,24 +246,17 @@ button {
   user-select: none;
 }
 
-/* Vibrant drifting flame glow + dot texture, dark mode only. Three warm
-   tones (ember, base accent, amber) layered so the glow reads as fire
-   rather than a flat tint, breathing via glow-pulse on top of the drift. */
+/* Plain dark-grey backdrop, dark mode only — a faint neutral vignette for
+   depth instead of a colored glow. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(900px 720px at 84% 8%, rgba(255, 138, 6, 0.34), transparent 55%),
-    radial-gradient(650px 560px at 8% 4%, rgba(255, 94, 0, 0.18), transparent 50%),
-    radial-gradient(980px 780px at 18% 96%, rgba(194, 65, 12, 0.26), transparent 58%),
-    radial-gradient(560px 480px at 96% 90%, rgba(251, 86, 7, 0.2), transparent 52%);
-  filter: blur(46px) saturate(1.3);
+    radial-gradient(1100px 800px at 82% 4%, rgba(255, 255, 255, 0.035), transparent 60%),
+    radial-gradient(900px 700px at 6% 100%, rgba(255, 255, 255, 0.02), transparent 60%);
   pointer-events: none;
   z-index: -2;
-  animation:
-    var(--animate-drift),
-    var(--animate-glow-pulse);
 }
 :root[data-theme="light"] body::before {
   content: none;
@@ -329,9 +298,69 @@ body::before {
 }
 
 @layer utilities {
+  /* Warm glow biased toward the bottom-right corner, plus a small bright
+     "tail" blob bleeding just past that corner — the glowing-card look used
+     everywhere a bordered card appears. */
   .panel-card {
+    position: relative;
     border: 1px solid rgba(255, 255, 255, 0.09);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    border-right-color: color-mix(in srgb, var(--color-accent) 30%, rgba(255, 255, 255, 0.09));
+    border-bottom-color: color-mix(in srgb, var(--color-accent) 30%, rgba(255, 255, 255, 0.09));
+    box-shadow:
+      0 12px 32px rgba(0, 0, 0, 0.35),
+      14px 18px 42px -16px color-mix(in srgb, var(--color-accent) 60%, transparent);
+  }
+  .panel-card::after {
+    content: "";
+    position: absolute;
+    right: -14px;
+    bottom: -14px;
+    width: 70px;
+    height: 70px;
+    border-radius: 999px;
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--color-accent) 90%, transparent) 0%,
+      transparent 72%
+    );
+    filter: blur(14px);
+    opacity: 0.6;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /* Orange "ember" fade bleeding in from the right edge — recreates the
+     blurred-orange-shape-behind-glass stat-card look: hot at the right rim,
+     dissolving into the card surface, with an inset rim glow standing in
+     for the reference's blurred inner shadow (x -8, y 1, blur 13, #FF541B). */
+  .ember-fade {
+    background-image: radial-gradient(
+      62% 170% at 103% 52%,
+      #ff8a3c 0%,
+      #ff541b 20%,
+      rgba(255, 84, 27, 0.45) 46%,
+      rgba(255, 84, 27, 0.1) 68%,
+      transparent 84%
+    );
+  }
+  .ember-fade::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset -8px 1px 13px rgba(255, 84, 27, 0.4);
+    pointer-events: none;
+  }
+
+  /* Static dot pattern for sitting behind a chart — a small, tileable echo
+     of the page's animated DotGridBackground, without the canvas/JS cost. */
+  .chart-dots-bg {
+    background-image: radial-gradient(
+      color-mix(in srgb, var(--color-text) 30%, transparent) 1px,
+      transparent 1px
+    );
+    background-size: 16px 16px;
+    background-position: -4px -4px;
   }
 
   /* Frosted card for content sitting over the animated dot-grid background —
@@ -355,7 +384,28 @@ body::before {
 
 :root[data-theme="light"] .panel-card {
   border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  border-right-color: color-mix(in srgb, var(--color-accent) 22%, rgba(0, 0, 0, 0.06));
+  border-bottom-color: color-mix(in srgb, var(--color-accent) 22%, rgba(0, 0, 0, 0.06));
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.08),
+    10px 14px 34px -16px color-mix(in srgb, var(--color-accent) 32%, transparent);
+}
+:root[data-theme="light"] .panel-card::after {
+  opacity: 0.35;
+}
+
+/* Softer ember on white cards so the label/number keep their contrast. */
+:root[data-theme="light"] .ember-fade {
+  background-image: radial-gradient(
+    62% 170% at 103% 52%,
+    rgba(255, 122, 54, 0.9) 0%,
+    rgba(255, 84, 27, 0.5) 30%,
+    rgba(255, 84, 27, 0.16) 55%,
+    transparent 78%
+  );
+}
+:root[data-theme="light"] .ember-fade::before {
+  box-shadow: inset -8px 1px 13px rgba(255, 84, 27, 0.22);
 }
 
 :root[data-theme="light"] .glass-card {
@@ -379,9 +429,13 @@ body::before {
   overflow: hidden;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
+  border-right-color: color-mix(in srgb, var(--tint) 32%, rgba(255, 255, 255, 0.06));
+  border-bottom-color: color-mix(in srgb, var(--tint) 32%, rgba(255, 255, 255, 0.06));
   backdrop-filter: blur(24px) saturate(1.2);
   -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    14px 18px 42px -16px color-mix(in srgb, var(--tint) 55%, transparent);
   transition:
     transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
     border-color 300ms ease,
@@ -390,17 +444,25 @@ body::before {
 .bento-tile:hover {
   transform: translateY(-3px);
   border-color: color-mix(in srgb, var(--tint) 40%, transparent);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.55),
+    16px 20px 48px -14px color-mix(in srgb, var(--tint) 65%, transparent);
 }
 .bento-tile-glow {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(
-    circle at 78% 18%,
-    color-mix(in srgb, var(--tint) 22%, transparent),
-    transparent 55%
-  );
+  background:
+    radial-gradient(
+      circle at 88% 92%,
+      color-mix(in srgb, var(--tint) 40%, transparent),
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at 78% 18%,
+      color-mix(in srgb, var(--tint) 18%, transparent),
+      transparent 55%
+    );
   opacity: 0.7;
   transition: opacity 300ms ease;
 }
@@ -418,68 +480,21 @@ body::before {
   color: var(--tint);
 }
 
-/* ===== Home bento grid ===== */
-/* Masonry-style arrangement: two tall pillars (fuel, goals) flanking a run of
-   medium tiles, echoing the reference dashboard. Stacks on small screens. */
-.home-bento {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-}
-@media (min-width: 768px) {
-  .home-bento {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-@media (min-width: 1024px) {
-  .home-bento {
-    grid-template-columns: repeat(4, 1fr);
-    grid-template-rows: repeat(5, minmax(190px, auto));
-    grid-template-areas:
-      "fuel     peak     peak     todos"
-      "fuel     finance  goals    goals"
-      "fitness  habits   goals    goals"
-      "calories calories calories calories"
-      "school   school   school   school";
-  }
-  .home-bento > .area-fuel {
-    grid-area: fuel;
-  }
-  .home-bento > .area-peak {
-    grid-area: peak;
-  }
-  .home-bento > .area-todos {
-    grid-area: todos;
-  }
-  .home-bento > .area-finance {
-    grid-area: finance;
-  }
-  .home-bento > .area-goals {
-    grid-area: goals;
-  }
-  .home-bento > .area-fitness {
-    grid-area: fitness;
-  }
-  .home-bento > .area-habits {
-    grid-area: habits;
-  }
-  .home-bento > .area-calories {
-    grid-area: calories;
-  }
-  .home-bento > .area-school {
-    grid-area: school;
-  }
-}
-
 :root[data-theme="light"] .bento-tile {
   background: var(--color-surface);
   border-color: var(--color-border);
+  border-right-color: color-mix(in srgb, var(--tint) 26%, var(--color-border));
+  border-bottom-color: color-mix(in srgb, var(--tint) 26%, var(--color-border));
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.08),
+    10px 14px 34px -16px color-mix(in srgb, var(--tint) 30%, transparent);
 }
 :root[data-theme="light"] .bento-tile:hover {
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.12),
+    12px 16px 38px -14px color-mix(in srgb, var(--tint) 38%, transparent);
 }
 :root[data-theme="light"] .bento-tile-emoji {
   filter: none;

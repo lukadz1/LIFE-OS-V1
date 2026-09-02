@@ -89,8 +89,8 @@ export function useSchool() {
     ? gradedStanding.reduce((a, b) => (b.grade < a.grade ? b : a))
     : null;
 
-  // Same save-inside-updater pattern as useCalories/useFuel — avoids a
-  // reactive-effect race that can flush stale/empty data over a real save.
+  // Save-inside-updater pattern — avoids a reactive-effect race that can
+  // flush stale/empty data over a real save.
   const addExam = useCallback(
     (entry: {
       subjectId: string;

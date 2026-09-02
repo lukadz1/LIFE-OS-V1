@@ -41,7 +41,7 @@ export function ExamsList({ exams, subjects, onDelete }: ExamsListProps) {
             </p>
           </div>
           <span
-            className="shrink-0 font-serif text-[19px] italic"
+            className="shrink-0 font-sans text-[19px]"
             style={{ color: gradeColor(exam.grade) }}
           >
             {exam.grade.toFixed(1)}
